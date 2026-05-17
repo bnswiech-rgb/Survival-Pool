@@ -1,0 +1,353 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { processRoundResults } from '@/lib/contest-engine';
+import type { PickStatus } from '@/types';
+
+// Only these sports have structured score data from The Odds API
+const GRADEABLE_SPORT_KEYS = [
+  'basketball_nba',
+  'basketball_wnba',
+  'baseball_mlb',
+];
+
+const DEADLINE_SPORT_KEYS = [
+  'basketball_nba', 'basketball_wnba', 'baseball_mlb',
+  'tennis_atp_french_open', 'tennis_wta_french_open',
+  'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
+  'tennis_atp_us_open', 'tennis_wta_us_open',
+];
+
+interface OddsScore {
+  id: string;
+  sport_key: string;
+  commence_time: string;
+  completed: boolean;
+  home_team: string;
+  away_team: string;
+  scores: Array<{ name: string; score: string }> | null;
+}
+
+function normalize(s: string): string {
+  return s.toLowerCase().trim();
+}
+
+// Match pick.game ("Away @ Home") against API home_team / away_team
+// Uses last word of each team name to handle abbreviations
+function teamsMatch(gameField: string, homeTeam: string, awayTeam: string): boolean {
+  const g = normalize(gameField);
+  const homeLast = normalize(homeTeam).split(' ').pop()!;
+  const awayLast = normalize(awayTeam).split(' ').pop()!;
+  return g.includes(homeLast) && g.includes(awayLast);
+}
+
+function sideMatchesTeam(side: string, teamName: string): boolean {
+  const s = normalize(side);
+  const t = normalize(teamName);
+  // Check if the last word of the team name appears in the side string, or vice versa
+  const tLast = t.split(' ').pop()!;
+  return t.includes(s) || s.includes(t) || s.includes(tLast) || t.includes(s.split(' ').pop()!);
+}
+
+function gradePick(
+  pickType: string,
+  side: string,
+  lineValue: string,
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: number,
+  awayScore: number,
+): 'won' | 'lost' | 'push' {
+  if (pickType === 'moneyline') {
+    const pickedIsHome = sideMatchesTeam(side, homeTeam);
+    const pickedScore = pickedIsHome ? homeScore : awayScore;
+    const oppScore = pickedIsHome ? awayScore : homeScore;
+    if (pickedScore > oppScore) return 'won';
+    if (pickedScore < oppScore) return 'lost';
+    return 'push';
+  }
+
+  if (pickType === 'spread') {
+    // lineValue like "+4.5" or "-4.5"
+    const spread = parseFloat(lineValue);
+    if (isNaN(spread)) return 'lost';
+    const pickedIsHome = sideMatchesTeam(side, homeTeam);
+    const pickedScore = pickedIsHome ? homeScore : awayScore;
+    const oppScore = pickedIsHome ? awayScore : homeScore;
+    const result = pickedScore + spread - oppScore;
+    if (result > 0) return 'won';
+    if (result < 0) return 'lost';
+    return 'push';
+  }
+
+  if (pickType === 'total') {
+    // side is "Over" or "Under"; lineValue like "O 215.5" or "Over 215.5"
+    const totalLine = parseFloat(lineValue.replace(/[^\d.]/g, ''));
+    if (isNaN(totalLine)) return 'lost';
+    const actualTotal = homeScore + awayScore;
+    const isOver = normalize(side) === 'over';
+    if (isOver) {
+      if (actualTotal > totalLine) return 'won';
+      if (actualTotal < totalLine) return 'lost';
+    } else {
+      if (actualTotal < totalLine) return 'won';
+      if (actualTotal > totalLine) return 'lost';
+    }
+    return 'push';
+  }
+
+  return 'lost';
+}
+
+async function getNextRoundDeadline(frequency: string): Promise<Date> {
+  if (frequency === 'weekly') {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    d.setHours(21, 30, 0, 0);
+    return d;
+  }
+
+  try {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setUTCDate(now.getUTCDate() + 1);
+    tomorrow.setUTCHours(0, 0, 0, 0);
+    const dayAfter = new Date(tomorrow);
+    dayAfter.setUTCDate(tomorrow.getUTCDate() + 1);
+
+    let latestStart: Date | null = null;
+    for (const sportKey of DEADLINE_SPORT_KEYS) {
+      try {
+        const res = await fetch(
+          `https://api.the-odds-api.com/v4/sports/${sportKey}/odds?apiKey=${process.env.ODDS_API_KEY}&regions=us&markets=h2h&oddsFormat=american&dateFormat=iso`,
+          { cache: 'no-store' },
+        );
+        if (!res.ok) continue;
+        const games = await res.json();
+        if (!Array.isArray(games)) continue;
+        for (const game of games) {
+          const t = new Date(game.commence_time);
+          if (t >= tomorrow && t < dayAfter && (!latestStart || t > latestStart)) {
+            latestStart = t;
+          }
+        }
+      } catch { continue; }
+    }
+    if (latestStart) return latestStart;
+  } catch { /* fall through */ }
+
+  // Fallback: 9:30 PM EDT tomorrow
+  const fallback = new Date();
+  fallback.setUTCDate(fallback.getUTCDate() + 1);
+  fallback.setUTCHours(1, 30, 0, 0);
+  return fallback;
+}
+
+export async function GET(request: NextRequest) {
+  // Verify cron secret — Vercel sends this automatically, or external crons must include it
+  const authHeader = request.headers.get('authorization');
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+  // Find all pending picks where the game started 3+ hours ago
+  const cutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  const { data: pendingPicks, error: picksError } = await supabase
+    .from('picks')
+    .select('*')
+    .eq('status', 'pending')
+    .lt('game_start_time', cutoff);
+
+  if (picksError) return NextResponse.json({ error: picksError.message }, { status: 500 });
+  if (!pendingPicks?.length) return NextResponse.json({ message: 'No picks to grade', graded: 0 });
+
+  // Fetch scores from The Odds API for each sport with pending picks
+  const sportKeys = [
+    ...new Set(
+      pendingPicks
+        .map((p: any) => p.league as string)
+        .filter((k: string) => GRADEABLE_SPORT_KEYS.includes(k)),
+    ),
+  ];
+
+  const scoresMap: Record<string, OddsScore[]> = {};
+  for (const sportKey of sportKeys) {
+    try {
+      const res = await fetch(
+        `https://api.the-odds-api.com/v4/sports/${sportKey}/scores?apiKey=${process.env.ODDS_API_KEY}&daysFrom=3&dateFormat=iso`,
+        { cache: 'no-store' },
+      );
+      if (res.ok) scoresMap[sportKey] = await res.json();
+    } catch { /* skip, try next */ }
+  }
+
+  let gradedCount = 0;
+  const gradedRoundIds = new Set<string>();
+
+  // Grade each pending pick
+  for (const pick of pendingPicks as any[]) {
+    const scores = scoresMap[pick.league];
+    if (!scores) continue; // tennis or sport without score data — skip for now
+
+    const game = scores.find(
+      (g: OddsScore) => g.completed && g.scores && teamsMatch(pick.game, g.home_team, g.away_team),
+    );
+    if (!game?.scores || game.scores.length < 2) continue; // game not finished yet
+
+    const homeScoreObj = game.scores.find((s: any) => normalize(s.name) === normalize(game.home_team));
+    const awayScoreObj = game.scores.find((s: any) => normalize(s.name) === normalize(game.away_team));
+    if (!homeScoreObj || !awayScoreObj) continue;
+
+    const result = gradePick(
+      pick.pick_type,
+      pick.side,
+      pick.line_value,
+      game.home_team,
+      game.away_team,
+      parseInt(homeScoreObj.score),
+      parseInt(awayScoreObj.score),
+    );
+
+    const { error } = await supabase
+      .from('picks')
+      .update({ status: result, graded_at: new Date().toISOString(), is_locked: true })
+      .eq('id', pick.id);
+
+    if (!error) {
+      gradedCount++;
+      gradedRoundIds.add(pick.round_id);
+    }
+  }
+
+  // For each round that had picks graded, check if all picks are done and auto-advance
+  const advancedRounds: string[] = [];
+
+  for (const roundId of gradedRoundIds) {
+    // Skip if any picks in this round are still pending
+    const { data: stillPending } = await supabase
+      .from('picks')
+      .select('id')
+      .eq('round_id', roundId)
+      .eq('status', 'pending');
+
+    if (stillPending && stillPending.length > 0) continue;
+
+    // Load round + pool
+    const { data: round } = await supabase
+      .from('rounds')
+      .select('*, pools(*)')
+      .eq('id', roundId)
+      .single();
+
+    if (!round || round.status === 'completed') continue;
+
+    const pool = round.pools as any;
+
+    // Get all graded picks for this round
+    const { data: picks } = await supabase
+      .from('picks')
+      .select('*')
+      .eq('round_id', roundId)
+      .neq('status', 'pending');
+
+    // Get active participants
+    const { data: participants } = await supabase
+      .from('pool_participants')
+      .select('*')
+      .eq('pool_id', round.pool_id)
+      .in('status', ['active', 'advanced']);
+
+    if (!participants?.length) continue;
+
+    const picksMap = new Map<string, PickStatus>();
+    for (const pick of picks ?? []) picksMap.set(pick.user_id, pick.status as PickStatus);
+
+    const updates = processRoundResults(
+      participants as any,
+      picksMap,
+      {
+        contest_format: pool.contest_format,
+        push_rule: pool.push_rule,
+        all_lose_rule: pool.all_lose_rule,
+        lives_count: pool.lives_count,
+        target_wins: pool.target_wins,
+        target_streak: pool.target_streak,
+        max_losses: pool.max_losses,
+        push_resets_streak: pool.push_resets_streak,
+      },
+      round.round_number,
+    );
+
+    // Apply participant updates and activity feed
+    for (const [participantId, update] of updates) {
+      const participant = participants.find((p: any) => p.id === participantId);
+      if (!participant) continue;
+
+      const dbUpdate: Record<string, any> = { status: update.status };
+      if (update.lives_remaining !== undefined) dbUpdate.lives_remaining = update.lives_remaining;
+      if (update.current_streak !== undefined) dbUpdate.current_streak = update.current_streak;
+      if (update.wins !== undefined) dbUpdate.wins = update.wins;
+      if (update.losses !== undefined) dbUpdate.losses = update.losses;
+      if (update.pushes !== undefined) dbUpdate.pushes = update.pushes;
+      if (update.rounds_survived !== undefined) dbUpdate.rounds_survived = update.rounds_survived;
+      if (update.eliminated_round !== undefined) dbUpdate.eliminated_round = update.eliminated_round;
+
+      await supabase.from('pool_participants').update(dbUpdate).eq('id', participantId);
+
+      if (update.status === 'eliminated') {
+        await supabase.from('activity_feed').insert({
+          pool_id: round.pool_id, user_id: participant.user_id,
+          activity_type: 'eliminated', metadata: { round: round.round_number },
+        });
+      } else if (update.status === 'winner') {
+        await supabase.from('activity_feed').insert({
+          pool_id: round.pool_id, user_id: participant.user_id,
+          activity_type: 'won_contest', metadata: { pool_name: pool.name },
+        });
+      } else {
+        await supabase.from('activity_feed').insert({
+          pool_id: round.pool_id, user_id: participant.user_id,
+          activity_type: 'survived_round', metadata: { round: round.round_number },
+        });
+      }
+    }
+
+    // Mark round completed and lock all picks
+    await supabase.from('rounds').update({ status: 'completed' }).eq('id', roundId);
+    await supabase.from('picks').update({ is_locked: true }).eq('round_id', roundId);
+
+    // Check if contest is over
+    const { data: remaining } = await supabase
+      .from('pool_participants')
+      .select('status')
+      .eq('pool_id', round.pool_id)
+      .in('status', ['active', 'advanced', 'winner']);
+
+    const winners = (remaining ?? []).filter((p: any) => p.status === 'winner');
+    const alive = (remaining ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status));
+
+    if (alive.length <= 1 || winners.length > 0) {
+      await supabase.from('pools').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', round.pool_id);
+    } else {
+      const nextDeadline = await getNextRoundDeadline(pool.round_frequency);
+      await supabase.from('rounds').insert({
+        pool_id: round.pool_id,
+        round_number: round.round_number + 1,
+        deadline: nextDeadline.toISOString(),
+        status: 'open',
+      });
+    }
+
+    advancedRounds.push(roundId);
+  }
+
+  return NextResponse.json({
+    graded: gradedCount,
+    advancedRounds: advancedRounds.length,
+    timestamp: new Date().toISOString(),
+  });
+}

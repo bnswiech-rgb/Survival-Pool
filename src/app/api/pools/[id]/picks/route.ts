@@ -62,9 +62,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Round is not open for picks' }, { status: 400 });
   }
 
-  // Check deadline
+  // Check round deadline
   if (new Date(round.deadline) < new Date()) {
     return NextResponse.json({ error: 'Pick deadline has passed' }, { status: 400 });
+  }
+
+  // Check game hasn't started yet
+  if (new Date(game_start_time) <= new Date()) {
+    return NextResponse.json({ error: 'That game has already started' }, { status: 400 });
   }
 
   // Check participant is active

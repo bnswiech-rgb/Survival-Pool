@@ -16,6 +16,11 @@ export async function PATCH(
   if (pick.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   if (pick.is_locked) return NextResponse.json({ error: 'Pick is locked and cannot be changed' }, { status: 400 });
 
+  // Block changes if the existing pick's game has already started
+  if (pick.game_start_time && new Date(pick.game_start_time) <= new Date()) {
+    return NextResponse.json({ error: 'That game has already started — pick is locked' }, { status: 400 });
+  }
+
   const body = await request.json();
   const { sport, league, game, pick_type, side, line_value, american_odds, game_start_time } = body;
 

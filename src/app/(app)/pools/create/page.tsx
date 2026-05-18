@@ -30,7 +30,7 @@ export default function CreatePoolPage() {
 
   // Step 1: Basic Info
   const [name, setName] = useState('');
-  const [sport, setSport] = useState('NFL');
+  const [sport, setSport] = useState('NBA');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [maxEntries, setMaxEntries] = useState('');
 

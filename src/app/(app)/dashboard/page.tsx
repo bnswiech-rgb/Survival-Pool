@@ -11,14 +11,13 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   const [{ data: profile }, { data: myParticipations }, { data: activity }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user!.id).single(),
+    supabase.from('profiles').select('*').eq('id', user!.id).maybeSingle(),
     supabase
       .from('pool_participants')
       .select('*, pools(*)')
       .eq('user_id', user!.id)
-      .in('status', ['active', 'advanced'])
       .order('joined_at', { ascending: false })
-      .limit(10),
+      .limit(20),
     supabase
       .from('activity_feed')
       .select('*, profiles(username, avatar_url)')
@@ -42,16 +41,23 @@ export default async function DashboardPage() {
           .select('*')
           .in('pool_id', poolIds)
           .eq('user_id', user!.id)
-          .eq('status', 'pending'),
+          .order('submitted_at', { ascending: false }),
       ])
     : [{ data: [] }, { data: [] }];
 
   // Map pool_id -> current round and pick for quick lookup
   const roundByPool = Object.fromEntries((openRounds ?? []).map((r: any) => [r.pool_id, r]));
-  const pickByPool  = Object.fromEntries((myPicks   ?? []).map((pk: any) => [pk.pool_id, pk]));
+  // Keep most recent pick per pool (picks are ordered by submitted_at desc)
+  const pickByPool: Record<string, any> = {};
+  for (const pk of (myPicks ?? [])) {
+    if (!pickByPool[pk.pool_id]) pickByPool[pk.pool_id] = pk;
+  }
+
+  const activeParticipations = (myParticipations ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status));
+  const finishedParticipations = (myParticipations ?? []).filter((p: any) => ['eliminated', 'winner'].includes(p.status));
 
   const stats = [
-    { label: 'Active Contests', value: myParticipations?.length ?? 0, icon: Target, color: 'text-blue-400' },
+    { label: 'Active Contests', value: activeParticipations.length, icon: Target, color: 'text-blue-400' },
     { label: 'Total Wins', value: profile?.wins ?? 0, icon: TrendingUp, color: 'text-green-400' },
     { label: 'Contests Entered', value: profile?.pools_entered ?? 0, icon: Trophy, color: 'text-yellow-400' },
     { label: 'Contests Won', value: profile?.pools_won ?? 0, icon: Award, color: 'text-purple-400' },
@@ -92,7 +98,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
 
-          {(!myParticipations || myParticipations.length === 0) ? (
+          {activeParticipations.length === 0 ? (
             <Card>
               <CardBody className="text-center py-12">
                 <Trophy size={40} className="text-gray-600 mx-auto mb-3" />
@@ -106,7 +112,7 @@ export default async function DashboardPage() {
               </CardBody>
             </Card>
           ) : (
-            myParticipations.map((p: any) => {
+            activeParticipations.map((p: any) => {
               const pool = p.pools;
               if (!pool) return null;
               const round = roundByPool[pool.id];
@@ -172,6 +178,40 @@ export default async function DashboardPage() {
                 </Link>
               );
             })
+          )}
+
+          {/* Past Contests */}
+          {finishedParticipations.length > 0 && (
+            <div className="mt-6">
+              <h2 className="text-lg font-bold text-white mb-3">Past Contests</h2>
+              <div className="space-y-2">
+                {finishedParticipations.map((p: any) => {
+                  const pool = p.pools;
+                  if (!pool) return null;
+                  const isWinner = p.status === 'winner';
+                  return (
+                    <Link key={p.id} href={`/pools/${pool.id}`}>
+                      <Card className="hover:border-gray-700 transition-colors cursor-pointer opacity-70 hover:opacity-100">
+                        <CardBody>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <span className="font-bold text-white truncate block">{pool.name}</span>
+                              <span className="text-xs text-gray-500">{pool.sport} · {getContestFormatLabel(pool.contest_format)}</span>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className={`text-sm font-bold ${isWinner ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {isWinner ? '🏆 Winner' : '💀 Eliminated'}
+                              </div>
+                              <div className="text-xs text-gray-500">W{p.wins}-L{p.losses}</div>
+                            </div>
+                          </div>
+                        </CardBody>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
 

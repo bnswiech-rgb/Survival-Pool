@@ -1,17 +1,17 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { CountdownTimer } from './CountdownTimer';
-import { StandingsTable } from '@/components/leaderboard/StandingsTable';
 import { PoolChat } from '@/components/chat/PoolChat';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { Avatar } from '@/components/ui/Avatar';
 import { formatCents, calculatePrizePool, getContestFormatLabel } from '@/lib/utils';
 import type { Pool, PoolParticipant, Round, Pick, Profile } from '@/types';
 import toast from 'react-hot-toast';
 import { Users, Clock, Trophy, Target, Zap } from 'lucide-react';
+import GameBoard from '@/app/(app)/pools/[id]/picks/GameBoard';
 
 interface Props {
   pool: Pool;
@@ -39,8 +39,8 @@ export function PoolDetailClient({
   const [activeTab, setActiveTab] = useState('Overview');
   const [participants, setParticipants] = useState(initialParticipants);
   const [myParticipation, setMyParticipation] = useState(initMy);
-  const [myPick] = useState(initialMyPick);
-  const [picks] = useState(initialPicks);
+  const [myPick, setMyPick] = useState(initialMyPick);
+  const [picks, setPicks] = useState(initialPicks);
   const [joiningLoading, setJoiningLoading] = useState(false);
   const supabase = createClient();
 
@@ -90,10 +90,42 @@ export function PoolDetailClient({
     setJoiningLoading(false);
   };
 
+  // After pick submitted inline, refresh picks list
+  const handlePickSubmitted = async () => {
+    if (!initialCurrentRound) return;
+    // Refresh my pick
+    const { data: pick } = await supabase
+      .from('picks')
+      .select('*')
+      .eq('pool_id', pool.id)
+      .eq('round_id', initialCurrentRound.id)
+      .eq('user_id', currentUser!.id)
+      .maybeSingle();
+    if (pick) setMyPick(pick as any);
+
+    // Refresh all picks for this round
+    const { data: allPicks } = await supabase
+      .from('picks')
+      .select('*, profiles(username, avatar_url)')
+      .eq('pool_id', pool.id)
+      .eq('round_id', initialCurrentRound.id)
+      .order('submitted_at', { ascending: false });
+    if (allPicks) setPicks(allPicks as any);
+  };
+
   const isAdmin = currentUser?.role === 'admin';
   const hasSubmittedPick = !!myPick;
   const picksVisible = hasSubmittedPick || isAdmin;
-  const canSubmitPick = myParticipation && (myParticipation.status === 'active' || myParticipation.status === 'advanced') && initialCurrentRound?.status === 'open';
+  const isRoundLocked = !initialCurrentRound || initialCurrentRound.status !== 'open' || new Date(initialCurrentRound.deadline) < new Date();
+  const canSubmitPick = myParticipation && (myParticipation.status === 'active' || myParticipation.status === 'advanced') && !isRoundLocked;
+
+  // Build a map of userId -> pick for the survivors tab
+  const pickByUser = Object.fromEntries(picks.map((p: any) => [p.user_id, p]));
+
+  function pickLabel(pick: any) {
+    if (!pick) return null;
+    return pick.pick_type === 'total' ? pick.line_value : `${pick.side} ${pick.line_value}`;
+  }
 
   return (
     <div className="space-y-6">
@@ -106,18 +138,11 @@ export function PoolDetailClient({
           </div>
           <div className="text-gray-400">{pool.sport}</div>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          {!myParticipation && (pool.status === 'open' || pool.status === 'upcoming') && currentUser && (
-            <Button onClick={handleJoin} loading={joiningLoading} size="lg">
-              Join Contest {pool.entry_fee_cents > 0 ? `• ${formatCents(pool.entry_fee_cents)}` : '• Free'}
-            </Button>
-          )}
-          {canSubmitPick && (
-            <Link href={`/pools/${pool.id}/picks`}>
-              <Button variant="secondary" size="lg">Submit Pick</Button>
-            </Link>
-          )}
-        </div>
+        {!myParticipation && (pool.status === 'open' || pool.status === 'upcoming') && currentUser && (
+          <Button onClick={handleJoin} loading={joiningLoading} size="lg">
+            Join Contest {pool.entry_fee_cents > 0 ? `• ${formatCents(pool.entry_fee_cents)}` : '• Free'}
+          </Button>
+        )}
       </div>
 
       {/* My Status Banner */}
@@ -136,21 +161,18 @@ export function PoolDetailClient({
                 W{myParticipation.wins}-L{myParticipation.losses}-P{myParticipation.pushes}
               </span>
             </div>
-            {myPick && (
+            {myPick ? (
               <div className="text-sm text-gray-300 mt-0.5 truncate">
-                {myPick.pick_type === 'total' ? myPick.line_value : `${myPick.side} ${myPick.line_value}`} · <span className={
+                {pickLabel(myPick)} · <span className={
                   myPick.status === 'won' ? 'text-green-400' :
                   myPick.status === 'lost' ? 'text-red-400' :
                   myPick.status === 'push' ? 'text-blue-400' : 'text-yellow-400'
                 }>{myPick.status}</span>
               </div>
-            )}
+            ) : canSubmitPick ? (
+              <div className="text-sm text-yellow-400 mt-0.5">⚠ No pick yet — go to the Picks tab</div>
+            ) : null}
           </div>
-          {!myPick && canSubmitPick && (
-            <Link href={`/pools/${pool.id}/picks`} className="flex-shrink-0">
-              <Button size="sm">Submit Pick</Button>
-            </Link>
-          )}
         </div>
       )}
 
@@ -167,6 +189,9 @@ export function PoolDetailClient({
             }`}
           >
             {tab}
+            {tab === 'Picks' && canSubmitPick && !hasSubmittedPick && (
+              <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-yellow-400 align-middle" />
+            )}
           </button>
         ))}
       </div>
@@ -175,7 +200,6 @@ export function PoolDetailClient({
       {activeTab === 'Overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Prize Pool */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -211,13 +235,12 @@ export function PoolDetailClient({
               </CardBody>
             </Card>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 { label: 'Entries', value: participants.length, icon: Users },
                 { label: 'Alive', value: aliveCount, icon: Zap },
                 { label: 'Eliminated', value: eliminatedCount, icon: Target },
-                { label: 'Round', value: initialCurrentRound?.round_number ?? '-', icon: Trophy },
+                { label: 'Round', value: latestRoundNumber, icon: Trophy },
               ].map(s => (
                 <Card key={s.label}>
                   <CardBody className="text-center py-3">
@@ -228,76 +251,31 @@ export function PoolDetailClient({
               ))}
             </div>
 
-            {/* Format-specific info */}
             {pool.contest_format === 'lives' && (
-              <Card>
-                <CardBody>
-                  <div className="text-sm text-gray-400">
-                    <strong className="text-white">Lives Mode:</strong> Each participant starts with {pool.lives_count} {pool.lives_count === 1 ? 'life' : 'lives'}. Lose a pick, lose a life. Run out of lives and you&apos;re eliminated.
-                  </div>
-                </CardBody>
-              </Card>
+              <Card><CardBody><div className="text-sm text-gray-400"><strong className="text-white">Lives Mode:</strong> Each participant starts with {pool.lives_count} {pool.lives_count === 1 ? 'life' : 'lives'}. Lose a pick, lose a life. Run out of lives and you&apos;re eliminated.</div></CardBody></Card>
             )}
             {pool.contest_format === 'streak_race' && (
-              <Card>
-                <CardBody>
-                  <div className="text-sm text-gray-400">
-                    <strong className="text-white">Streak Race:</strong> First to reach {pool.target_streak} consecutive wins claims victory. A loss resets your streak to zero.
-                  </div>
-                </CardBody>
-              </Card>
+              <Card><CardBody><div className="text-sm text-gray-400"><strong className="text-white">Streak Race:</strong> First to reach {pool.target_streak} consecutive wins claims victory. A loss resets your streak to zero.</div></CardBody></Card>
             )}
             {pool.contest_format === 'first_to_x' && (
-              <Card>
-                <CardBody>
-                  <div className="text-sm text-gray-400">
-                    <strong className="text-white">First To X:</strong> First participant to reach {pool.target_wins} total wins wins the contest.
-                  </div>
-                </CardBody>
-              </Card>
+              <Card><CardBody><div className="text-sm text-gray-400"><strong className="text-white">First To X:</strong> First participant to reach {pool.target_wins} total wins wins the contest.</div></CardBody></Card>
             )}
           </div>
 
-          {/* Rules */}
           <div className="space-y-4">
             <Card>
-              <CardHeader>
-                <h3 className="font-bold text-white">Contest Rules</h3>
-              </CardHeader>
+              <CardHeader><h3 className="font-bold text-white">Contest Rules</h3></CardHeader>
               <CardBody className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Format</span>
-                  <span className="text-white">{getContestFormatLabel(pool.contest_format)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Push rule</span>
-                  <span className="text-white capitalize">{pool.push_rule}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">All-lose rule</span>
-                  <span className="text-white capitalize">{pool.all_lose_rule}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Frequency</span>
-                  <span className="text-white capitalize">{pool.round_frequency}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Prize</span>
-                  <span className="text-white capitalize">{pool.prize_structure.replace(/_/g, ' ')}</span>
-                </div>
-                {pool.max_entries && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Max entries</span>
-                    <span className="text-white">{pool.max_entries}</span>
-                  </div>
-                )}
+                <div className="flex justify-between"><span className="text-gray-400">Format</span><span className="text-white">{getContestFormatLabel(pool.contest_format)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Push rule</span><span className="text-white capitalize">{pool.push_rule}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">All-lose rule</span><span className="text-white capitalize">{pool.all_lose_rule}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Frequency</span><span className="text-white capitalize">{pool.round_frequency}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Prize</span><span className="text-white capitalize">{pool.prize_structure.replace(/_/g, ' ')}</span></div>
+                {pool.max_entries && <div className="flex justify-between"><span className="text-gray-400">Max entries</span><span className="text-white">{pool.max_entries}</span></div>}
               </CardBody>
             </Card>
-
             <Card>
-              <CardHeader>
-                <h3 className="font-bold text-white text-sm">Pick Eligibility</h3>
-              </CardHeader>
+              <CardHeader><h3 className="font-bold text-white text-sm">Pick Eligibility</h3></CardHeader>
               <CardBody className="text-xs text-gray-400 space-y-2">
                 <p>• Spread/Total: odds must be between -115 and -105</p>
                 <p>• Moneyline: must be -150 or better (less negative)</p>
@@ -308,59 +286,67 @@ export function PoolDetailClient({
         </div>
       )}
 
-      {/* Survivors */}
-      {activeTab === 'Survivors' && (
-        <StandingsTable participants={participants} pool={pool} />
-      )}
-
-      {/* Chat */}
-      {activeTab === 'Chat' && (
-        <PoolChat poolId={pool.id} currentUser={currentUser} />
-      )}
-
-      {/* Picks */}
+      {/* Picks Tab */}
       {activeTab === 'Picks' && (
-        <div>
-          {!picksVisible && (
+        <div className="space-y-6">
+          {/* Game picker — show if user can still pick */}
+          {canSubmitPick && initialCurrentRound && myParticipation && currentUser && (
+            <div>
+              {!hasSubmittedPick && (
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-yellow-400 font-bold text-sm">⚠ Pick not submitted yet</span>
+                  <CountdownTimer deadline={initialCurrentRound.deadline} className="text-sm" />
+                </div>
+              )}
+              {hasSubmittedPick && (
+                <div className="mb-4 text-sm text-green-400 font-medium">✓ Pick submitted — you can change it until the deadline</div>
+              )}
+              <GameBoard
+                pool={pool}
+                round={initialCurrentRound}
+                participant={myParticipation}
+                existingPick={myPick}
+                isLocked={false}
+                userId={currentUser.id}
+                onPickSubmitted={handlePickSubmitted}
+                inline
+              />
+            </div>
+          )}
+
+          {/* Locked round with no pick */}
+          {!canSubmitPick && !hasSubmittedPick && myParticipation && myParticipation.status !== 'eliminated' && (
             <Card>
-              <CardBody className="text-center py-12">
-                <Clock size={32} className="text-yellow-400 mx-auto mb-3" />
-                <p className="text-gray-400 mb-2">Submit your pick to see everyone else&apos;s picks.</p>
-                {canSubmitPick && (
-                  <Link href={`/pools/${pool.id}/picks`}>
-                    <Button size="sm" className="mt-2">Submit Pick</Button>
-                  </Link>
-                )}
+              <CardBody className="text-center py-8">
+                <Clock size={28} className="text-gray-600 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">The pick window is closed for this round.</p>
               </CardBody>
             </Card>
           )}
+
+          {/* Picks list — visible after submitting */}
           {picksVisible && (
             <div className="space-y-3">
-              <h3 className="text-lg font-bold text-white">
-                Round {initialCurrentRound?.round_number} Picks
-              </h3>
+              <h3 className="text-lg font-bold text-white">Round {latestRoundNumber} Picks</h3>
               {picks.length === 0 ? (
-                <Card>
-                  <CardBody className="text-center py-8 text-gray-500">No picks submitted yet.</CardBody>
-                </Card>
+                <Card><CardBody className="text-center py-8 text-gray-500">No picks submitted yet.</CardBody></Card>
               ) : (
-                <div className="space-y-3">
-                  {picks.map(pick => (
+                <div className="space-y-2">
+                  {picks.map((pick: any) => (
                     <Card key={pick.id} className={pick.status === 'won' ? 'border-green-500/30' : pick.status === 'lost' ? 'border-red-500/30' : ''}>
                       <CardBody>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-white">{(pick as any).profiles?.username ?? 'Unknown'}</span>
-                              <Badge variant={pick.status === 'won' ? 'green' : pick.status === 'lost' ? 'red' : pick.status === 'push' ? 'blue' : 'gray'}>
-                                {pick.status.toUpperCase()}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-gray-400 mt-1">{pick.game}</div>
-                            <div className="text-sm text-white mt-0.5">
-                              {pick.pick_type === 'total' ? pick.line_value : `${pick.side} ${pick.line_value}`} · <span className="text-gray-500 capitalize">{pick.pick_type}</span>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar src={pick.profiles?.avatar_url} username={pick.profiles?.username ?? '?'} size="xs" />
+                            <div className="min-w-0">
+                              <span className="font-bold text-white text-sm">{pick.profiles?.username ?? 'Unknown'}</span>
+                              <div className="text-xs text-gray-400 truncate">{pick.game}</div>
+                              <div className="text-xs text-white">{pickLabel(pick)} · <span className="text-gray-500 capitalize">{pick.pick_type}</span></div>
                             </div>
                           </div>
+                          <Badge variant={pick.status === 'won' ? 'green' : pick.status === 'lost' ? 'red' : pick.status === 'push' ? 'blue' : 'gray'}>
+                            {pick.status.toUpperCase()}
+                          </Badge>
                         </div>
                       </CardBody>
                     </Card>
@@ -369,7 +355,85 @@ export function PoolDetailClient({
               )}
             </div>
           )}
+
+          {/* Not yet visible */}
+          {!picksVisible && !canSubmitPick && (
+            <Card>
+              <CardBody className="text-center py-10">
+                <Clock size={28} className="text-yellow-400 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">Submit your pick to see everyone else&apos;s picks.</p>
+              </CardBody>
+            </Card>
+          )}
         </div>
+      )}
+
+      {/* Survivors Tab */}
+      {activeTab === 'Survivors' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-white">Survivors</h3>
+            <div className="text-sm text-gray-400">{participants.length} entries</div>
+          </div>
+          <div className="space-y-2">
+            {[...participants]
+              .sort((a, b) => {
+                if (a.status === 'winner' && b.status !== 'winner') return -1;
+                if (b.status === 'winner' && a.status !== 'winner') return 1;
+                if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
+                if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
+                return b.wins - a.wins;
+              })
+              .map((p: any, idx) => {
+                const isElim = p.status === 'eliminated';
+                const pick = picksVisible ? pickByUser[p.user_id] : null;
+                return (
+                  <Card key={p.id} className={isElim ? 'opacity-50' : p.status === 'winner' ? 'border-yellow-500/30' : ''}>
+                    <CardBody>
+                      <div className="flex items-center gap-3">
+                        <div className="text-gray-500 font-bold text-sm w-6 text-center flex-shrink-0">
+                          {p.status === 'winner' ? '🏆' : isElim ? '💀' : `#${idx + 1}`}
+                        </div>
+                        <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`font-bold text-sm ${isElim ? 'text-gray-500' : 'text-white'}`}>
+                              {p.profiles?.username ?? 'Unknown'}
+                            </span>
+                            <span className="text-xs text-gray-500">W{p.wins}-L{p.losses}-P{p.pushes}</span>
+                          </div>
+                          {pick ? (
+                            <div className="text-xs mt-0.5">
+                              <span className="text-gray-400">{pick.game} · </span>
+                              <span className="text-white font-medium">{pickLabel(pick)}</span>
+                              {pick.status !== 'pending' && (
+                                <span className={`ml-1.5 font-bold ${pick.status === 'won' ? 'text-green-400' : pick.status === 'lost' ? 'text-red-400' : 'text-blue-400'}`}>
+                                  {pick.status.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                          ) : picksVisible ? (
+                            <div className="text-xs text-gray-600 mt-0.5">No pick submitted</div>
+                          ) : null}
+                        </div>
+                        <Badge variant={p.status === 'winner' ? 'yellow' : isElim ? 'red' : 'green'}>
+                          {p.status === 'winner' ? 'Winner' : isElim ? 'Out' : 'Alive'}
+                        </Badge>
+                      </div>
+                    </CardBody>
+                  </Card>
+                );
+              })}
+          </div>
+          {!picksVisible && initialCurrentRound && (
+            <p className="text-xs text-gray-600 text-center mt-2">Submit your pick to see what everyone else picked</p>
+          )}
+        </div>
+      )}
+
+      {/* Chat */}
+      {activeTab === 'Chat' && (
+        <PoolChat poolId={pool.id} currentUser={currentUser} />
       )}
     </div>
   );

@@ -32,11 +32,13 @@ interface GameBoardProps {
   existingPick: SubmittedPick | null;
   isLocked: boolean;
   userId: string;
+  inline?: boolean;
+  onPickSubmitted?: () => void;
 }
 
 const SPORTS = ['All', 'NBA', 'WNBA', 'MLB', 'ATP', 'WTA'] as const;
 
-export default function GameBoard({ pool, round, existingPick, isLocked }: GameBoardProps) {
+export default function GameBoard({ pool, round, existingPick, isLocked, inline, onPickSubmitted }: GameBoardProps) {
   const router = useRouter();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,8 +106,14 @@ export default function GameBoard({ pool, round, existingPick, isLocked }: GameB
       }
 
       toast.success('Pick locked in! 🎯');
-      router.push(`/pools/${pool.id}`);
-      router.refresh();
+      setSelectedPick(null);
+      setSelectedGame(null);
+      if (inline && onPickSubmitted) {
+        onPickSubmitted();
+      } else {
+        router.push(`/pools/${pool.id}`);
+        router.refresh();
+      }
     } catch (e) {
       toast.error('Something went wrong');
     } finally {
@@ -134,24 +142,26 @@ export default function GameBoard({ pool, round, existingPick, isLocked }: GameB
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className={inline ? '' : 'min-h-screen bg-gray-950'}>
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-gray-950/95 backdrop-blur border-b border-gray-800">
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h1 className="text-lg font-bold text-white">{pool.name}</h1>
-              <p className="text-sm text-gray-400">Round {round.round_number} · Locks in {timeUntil(round.deadline)}</p>
+      <div className={inline ? 'border-b border-gray-800 mb-4' : 'sticky top-0 z-40 bg-gray-950/95 backdrop-blur border-b border-gray-800'}>
+        <div className={inline ? 'py-2' : 'max-w-4xl mx-auto px-4 py-3'}>
+          {!inline && (
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h1 className="text-lg font-bold text-white">{pool.name}</h1>
+                <p className="text-sm text-gray-400">Round {round.round_number} · Locks in {timeUntil(round.deadline)}</p>
+              </div>
+              <div className="text-right">
+                {existingPick && !selectedPick && (
+                  <div className="bg-green-500/20 border border-green-500/40 rounded-lg px-3 py-1">
+                    <p className="text-xs text-green-400 font-medium">Pick submitted ✓</p>
+                    <p className="text-xs text-green-300">{existingPick.side} {existingPick.line_value}</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="text-right">
-              {existingPick && !selectedPick && (
-                <div className="bg-green-500/20 border border-green-500/40 rounded-lg px-3 py-1">
-                  <p className="text-xs text-green-400 font-medium">Pick submitted ✓</p>
-                  <p className="text-xs text-green-300">{existingPick.side} {existingPick.line_value}</p>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
 
           {/* Sport tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin mb-2">
@@ -224,7 +234,7 @@ export default function GameBoard({ pool, round, existingPick, isLocked }: GameB
       )}
 
       {/* Game list */}
-      <div className="max-w-4xl mx-auto px-4 py-4 pb-24">
+      <div className={inline ? 'py-2' : 'max-w-4xl mx-auto px-4 py-4 pb-24'}>
         {loading ? (
           <div className="space-y-3">
             {[...Array(6)].map((_, i) => (

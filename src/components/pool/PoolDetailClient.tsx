@@ -24,7 +24,7 @@ interface Props {
   initialPicks: Pick[];
 }
 
-const TABS = ['Overview', 'Picks', 'Survivors', 'Chat'];
+const TABS = ['Overview', 'Picks', 'Survivors', 'History', 'Chat'];
 
 export function PoolDetailClient({
   pool,
@@ -42,6 +42,9 @@ export function PoolDetailClient({
   const [myPick, setMyPick] = useState(initialMyPick);
   const [picks, setPicks] = useState(initialPicks);
   const [joiningLoading, setJoiningLoading] = useState(false);
+  const [historyRounds, setHistoryRounds] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const supabase = createClient();
 
   const { netPrizePool } = calculatePrizePool(
@@ -113,6 +116,62 @@ export function PoolDetailClient({
       .order('submitted_at', { ascending: false });
     if (allPicks) setPicks(allPicks as any);
   };
+
+  const loadHistory = async () => {
+    if (historyLoaded || historyLoading) return;
+    setHistoryLoading(true);
+    try {
+      const [{ data: rounds }, { data: myPicks }, { data: allPicks }] = await Promise.all([
+        supabase
+          .from('rounds')
+          .select('*')
+          .eq('pool_id', pool.id)
+          .eq('status', 'completed')
+          .order('round_number', { ascending: true }),
+        currentUser
+          ? supabase
+              .from('picks')
+              .select('*')
+              .eq('pool_id', pool.id)
+              .eq('user_id', currentUser.id)
+              .order('submitted_at', { ascending: true })
+          : Promise.resolve({ data: [] }),
+        supabase
+          .from('picks')
+          .select('*, profiles(username, avatar_url)')
+          .eq('pool_id', pool.id)
+          .neq('status', 'pending')
+          .order('submitted_at', { ascending: false }),
+      ]);
+
+      const myPicksByRound = Object.fromEntries(
+        (myPicks ?? []).map((p: any) => [p.round_id, p])
+      );
+      const allPicksByRound: Record<string, any[]> = {};
+      for (const pick of allPicks ?? []) {
+        if (!allPicksByRound[pick.round_id]) allPicksByRound[pick.round_id] = [];
+        allPicksByRound[pick.round_id].push(pick);
+      }
+
+      setHistoryRounds(
+        (rounds ?? []).map((round: any) => ({
+          round,
+          myPick: myPicksByRound[round.id] ?? null,
+          allPicks: allPicksByRound[round.id] ?? [],
+        }))
+      );
+    } finally {
+      setHistoryLoading(false);
+      setHistoryLoaded(true);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'History' && !historyLoaded) {
+      loadHistory();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const isAdmin = currentUser?.role === 'admin';
   const hasSubmittedPick = !!myPick;
@@ -479,6 +538,115 @@ export function PoolDetailClient({
           </div>
           {!picksVisible && initialCurrentRound && (
             <p className="text-xs text-gray-600 text-center mt-2">Submit your pick to see what everyone else picked</p>
+          )}
+        </div>
+      )}
+
+      {/* History Tab */}
+      {activeTab === 'History' && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-white">Round History</h3>
+
+          {!(myParticipation || isAdmin) ? (
+            <Card>
+              <CardBody className="text-center py-10 text-gray-500">
+                Join the contest to view history.
+              </CardBody>
+            </Card>
+          ) : historyLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-gray-900 rounded-xl border border-gray-800 p-4 animate-pulse">
+                  <div className="h-4 bg-gray-800 rounded w-1/4 mb-3" />
+                  <div className="h-10 bg-gray-800 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : historyRounds.length === 0 ? (
+            <Card>
+              <CardBody className="text-center py-10 text-gray-500">
+                No completed rounds yet.
+              </CardBody>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {historyRounds.map(({ round, myPick: histMyPick, allPicks: histAllPicks }) => (
+                <Card key={round.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-white">Round {round.round_number}</h4>
+                      <span className="text-xs text-gray-500">
+                        {new Date(round.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardBody className="space-y-3">
+                    {/* User's own pick highlighted */}
+                    {histMyPick ? (
+                      <div className={`rounded-lg px-3 py-2 border ${
+                        histMyPick.status === 'won' ? 'bg-green-500/10 border-green-500/30' :
+                        histMyPick.status === 'lost' ? 'bg-red-500/10 border-red-500/30' :
+                        histMyPick.status === 'push' ? 'bg-blue-500/10 border-blue-500/30' :
+                        'bg-gray-800 border-gray-700'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-gray-400 mb-0.5">Your Pick</p>
+                            <p className="text-white font-bold text-sm">
+                              {histMyPick.pick_type === 'total' ? histMyPick.line_value : `${histMyPick.side} ${histMyPick.line_value}`}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">{histMyPick.game}</p>
+                          </div>
+                          <Badge variant={
+                            histMyPick.status === 'won' ? 'green' :
+                            histMyPick.status === 'lost' ? 'red' :
+                            histMyPick.status === 'push' ? 'blue' : 'gray'
+                          }>
+                            {histMyPick.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg px-3 py-2 bg-gray-800/50 border border-gray-700">
+                        <p className="text-xs text-gray-500">You did not submit a pick this round</p>
+                      </div>
+                    )}
+
+                    {/* Everyone else's picks (collapsed, show count + expand) */}
+                    {histAllPicks.length > 0 && (
+                      <details className="group">
+                        <summary className="text-xs text-gray-400 cursor-pointer hover:text-white list-none flex items-center gap-1">
+                          <span className="group-open:hidden">▶</span>
+                          <span className="hidden group-open:inline">▼</span>
+                          Show all {histAllPicks.length} picks this round
+                        </summary>
+                        <div className="mt-2 space-y-1.5">
+                          {histAllPicks.map((pick: any) => (
+                            <div key={pick.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-gray-800/40">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-xs font-medium text-gray-300 truncate">
+                                  {pick.profiles?.username ?? 'Unknown'}
+                                </span>
+                                <span className="text-xs text-gray-500 truncate">
+                                  {pick.pick_type === 'total' ? pick.line_value : `${pick.side} ${pick.line_value}`}
+                                </span>
+                              </div>
+                              <Badge variant={
+                                pick.status === 'won' ? 'green' :
+                                pick.status === 'lost' ? 'red' :
+                                pick.status === 'push' ? 'blue' : 'gray'
+                              } className="flex-shrink-0 text-xs">
+                                {pick.status.toUpperCase()}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
           )}
         </div>
       )}

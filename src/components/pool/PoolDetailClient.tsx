@@ -274,22 +274,31 @@ export function PoolDetailClient({
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Trophy size={18} className="text-yellow-400" />
-                  <h3 className="font-bold text-white">Prize Pool</h3>
+                  <h3 className="font-bold text-white">{pool.entry_fee_cents === 0 ? 'Bragging Rights' : 'Prize Pool'}</h3>
                 </div>
               </CardHeader>
               <CardBody className="space-y-3">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-3xl font-black text-white">Pot</span>
-                  <span className="text-3xl font-black text-green-400">
-                    {pool.entry_fee_cents === 0 ? 'Free' : formatCents(netPrizePool)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-gray-500">(winner takes all)</p>
-                  <p className="text-xs text-gray-400">
-                    <span className="text-green-400 font-bold">{aliveCount}</span> survivor{aliveCount !== 1 ? 's' : ''} remaining
-                  </p>
-                </div>
+                {pool.entry_fee_cents === 0 ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400 text-sm">Free contest — last one standing wins</span>
+                    <p className="text-xs text-gray-400">
+                      <span className="text-green-400 font-bold">{aliveCount}</span> survivor{aliveCount !== 1 ? 's' : ''} remaining
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-3xl font-black text-white">Pot</span>
+                      <span className="text-3xl font-black text-green-400">{formatCents(netPrizePool)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-500">(winner takes all)</p>
+                      <p className="text-xs text-gray-400">
+                        <span className="text-green-400 font-bold">{aliveCount}</span> survivor{aliveCount !== 1 ? 's' : ''} remaining
+                      </p>
+                    </div>
+                  </>
+                )}
                 <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
                   <Clock size={14} className="text-yellow-400" />
                   {isStreakRace ? (

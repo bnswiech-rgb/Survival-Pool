@@ -20,7 +20,7 @@ export default async function PoolsPage({ searchParams }: Props) {
 
   let query = supabase
     .from('pools')
-    .select('*, pool_participants(current_streak, status)')
+    .select('*, pool_participants(current_streak, status, profiles(username))')
     .eq('visibility', 'public')
     .order('created_at', { ascending: false });
 
@@ -34,8 +34,10 @@ export default async function PoolsPage({ searchParams }: Props) {
   const enrichedPools = pools?.map((p: any) => {
     const participants = p.pool_participants ?? [];
     const participant_count = participants.length;
-    const leader_streak = participants.reduce((max: number, pp: any) => Math.max(max, pp.current_streak ?? 0), 0);
-    return { ...p, participant_count, leader_streak };
+    const leader = participants.reduce((best: any, pp: any) => (pp.current_streak ?? 0) > (best?.current_streak ?? 0) ? pp : best, null);
+    const leader_streak = leader?.current_streak ?? 0;
+    const leader_name = leader_streak > 0 ? (leader?.profiles?.username ?? null) : null;
+    return { ...p, participant_count, leader_streak, leader_name };
   }) ?? [];
 
   return (

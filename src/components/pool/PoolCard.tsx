@@ -110,7 +110,9 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
             <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-auto">
               <span>Leader: </span>
               <span className="text-green-400 font-bold">
-                {(pool as any).leader_streak > 0 ? `${(pool as any).leader_streak}W` : 'No picks yet'}
+                {(pool as any).leader_streak > 0
+                  ? `${(pool as any).leader_name ? `${(pool as any).leader_name} ` : ''}${(pool as any).leader_streak}W`
+                  : 'No winners yet'}
               </span>
             </div>
           ) : (

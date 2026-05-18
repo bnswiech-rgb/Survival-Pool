@@ -68,7 +68,12 @@ export default function LoginPage() {
             Sign In
           </Button>
         </form>
-        <p className="text-center text-gray-400 text-sm mt-6">
+        <p className="text-center mt-4">
+          <Link href="/forgot-password" className="text-gray-500 hover:text-gray-300 text-xs transition-colors">
+            Forgot password?
+          </Link>
+        </p>
+        <p className="text-center text-gray-400 text-sm mt-3">
           Don&apos;t have an account?{' '}
           <Link href="/signup" className="text-green-400 hover:text-green-300 font-medium transition-colors">
             Sign up free

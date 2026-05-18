@@ -157,7 +157,7 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
                 {existingPick && !selectedPick && (
                   <div className="bg-green-500/20 border border-green-500/40 rounded-lg px-3 py-1">
                     <p className="text-xs text-green-400 font-medium">Pick submitted ✓</p>
-                    <p className="text-xs text-green-300">{existingPick.side} {existingPick.line_value}</p>
+                    <p className="text-xs text-green-300">{existingPick.pick_type === 'moneyline' ? `${existingPick.side} ML` : existingPick.pick_type === 'total' ? existingPick.line_value : `${existingPick.side} ${existingPick.line_value}`}</p>
                   </div>
                 )}
               </div>

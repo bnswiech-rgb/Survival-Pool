@@ -184,7 +184,9 @@ export function PoolDetailClient({
 
   function pickLabel(pick: any) {
     if (!pick) return null;
-    return pick.pick_type === 'total' ? pick.line_value : `${pick.side} ${pick.line_value}`;
+    if (pick.pick_type === 'total') return pick.line_value;
+    if (pick.pick_type === 'moneyline') return `${pick.side} ML`;
+    return `${pick.side} ${pick.line_value}`;
   }
 
   return (

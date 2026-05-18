@@ -48,7 +48,6 @@ export default function CreatePoolPage() {
 
   // Step 4: Schedule
   const [startDate, setStartDate] = useState('');
-  const [pickDeadline, setPickDeadline] = useState('');
   const [roundFrequency, setRoundFrequency] = useState<'daily' | 'weekly'>('weekly');
 
   // Step 5: Rules
@@ -77,8 +76,7 @@ export default function CreatePoolPage() {
         push_resets_streak: pushResetsStreak,
         entry_fee_cents: entryFeeCents,
         rake_percentage: parseFloat(rakePercentage),
-        start_date: new Date(startDate).toISOString(),
-        pick_deadline: new Date(pickDeadline).toISOString(),
+        start_date: new Date(`${startDate}T00:00:00`).toISOString(),
         round_frequency: roundFrequency,
         push_rule: pushRule,
         all_lose_rule: allLoseRule,
@@ -97,7 +95,7 @@ export default function CreatePoolPage() {
 
   const canProceed = () => {
     if (step === 1) return name.trim().length >= 3;
-    if (step === 4) return startDate && pickDeadline;
+    if (step === 4) return !!startDate;
     return true;
   };
 
@@ -262,18 +260,11 @@ export default function CreatePoolPage() {
           <CardBody className="space-y-4">
             <Input
               label="Start Date"
-              type="datetime-local"
+              type="date"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
               required
-            />
-            <Input
-              label="First Pick Deadline"
-              type="datetime-local"
-              value={pickDeadline}
-              onChange={e => setPickDeadline(e.target.value)}
-              required
-              hint="Participants must submit picks before this time"
+              hint="Picks are due by 9:30 PM ET on the start date"
             />
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-300">Round Frequency</label>
@@ -352,6 +343,7 @@ export default function CreatePoolPage() {
                 { label: 'Visibility', value: visibility },
                 { label: 'Entry Fee', value: entryFeeCents > 0 ? formatCents(entryFeeCents) : 'Free' },
                 { label: 'Rake', value: `${rakePercentage}%` },
+                { label: 'Start Date', value: startDate ? new Date(`${startDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
                 { label: 'Frequency', value: roundFrequency },
                 { label: 'Push Rule', value: pushRule },
                 { label: 'All-Lose Rule', value: allLoseRule },
@@ -362,6 +354,9 @@ export default function CreatePoolPage() {
                   <div className="font-medium text-white mt-0.5">{item.value}</div>
                 </div>
               ))}
+            </div>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-3 py-2 text-blue-400 text-xs">
+              Picks for Round 1 are due by 9:30 PM ET on the start date. Subsequent round deadlines are set automatically.
             </div>
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 text-yellow-400 text-xs">
               By creating this contest you confirm it is a peer-to-peer picking contest only. All participants must be 18+.

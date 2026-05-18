@@ -140,7 +140,8 @@ export function processStreakRaceResult(
   currentRound: number = 1
 ): ParticipantUpdate {
   if (pickStatus === 'won') {
-    const newStreak = participant.current_streak + 1;
+    // If currently on a loss streak, reset to 1W; otherwise extend win streak
+    const newStreak = participant.current_streak < 0 ? 1 : participant.current_streak + 1;
     const isWinner = newStreak >= targetStreak;
     return {
       status: isWinner ? 'winner' : 'advanced',
@@ -151,7 +152,9 @@ export function processStreakRaceResult(
     };
   }
   if (pickStatus === 'lost') {
-    return { status: 'advanced', losses: participant.losses + 1, current_streak: 0 };
+    // If currently on a win streak, reset to -1L; otherwise extend loss streak
+    const newStreak = participant.current_streak > 0 ? -1 : participant.current_streak - 1;
+    return { status: 'advanced', losses: participant.losses + 1, current_streak: newStreak };
   }
   if (pickStatus === 'push' || pickStatus === 'void') {
     return {

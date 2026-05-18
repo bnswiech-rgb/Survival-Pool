@@ -55,9 +55,17 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
           </div>
 
           {/* Format */}
-          <Badge variant={getFormatBadgeVariant(pool.contest_format)} className="self-start">
-            {getContestFormatLabel(pool.contest_format)}
-          </Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant={getFormatBadgeVariant(pool.contest_format)} className="self-start">
+              {getContestFormatLabel(pool.contest_format)}
+            </Badge>
+            {pool.contest_format === 'streak_race' && pool.target_streak && (
+              <span className="text-xs text-gray-400">First to <span className="text-white font-bold">{pool.target_streak}W</span> in a row wins</span>
+            )}
+            {pool.contest_format === 'first_to_x' && pool.target_wins && (
+              <span className="text-xs text-gray-400">First to <span className="text-white font-bold">{pool.target_wins}W</span> wins</span>
+            )}
+          </div>
 
           {/* Prize */}
           <div className="bg-gray-800/50 rounded-lg px-3 py-2">

@@ -52,6 +52,7 @@ export function PoolDetailClient({
 
   const aliveCount = participants.filter(p => p.status === 'active' || p.status === 'advanced').length;
   const eliminatedCount = participants.filter(p => p.status === 'eliminated').length;
+  const isStreakRace = pool.contest_format === 'streak_race';
 
   // Realtime subscriptions
   useEffect(() => {
@@ -157,9 +158,19 @@ export function PoolDetailClient({
               <span className="font-bold text-white">
                 {myParticipation.status === 'eliminated' ? '💀 Eliminated' : '🟢 Alive'}
               </span>
-              <span className="text-gray-400 text-sm">
-                W{myParticipation.wins}-L{myParticipation.losses}-P{myParticipation.pushes}
-              </span>
+              {isStreakRace ? (() => {
+                const s = (myParticipation as any).current_streak ?? 0;
+                const label = s > 0 ? `${s}W streak` : s < 0 ? `${Math.abs(s)}L streak` : '0W streak';
+                return (
+                  <span className={`font-bold text-sm ${s > 0 ? 'text-green-400' : s < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                    {label} · target {pool.target_streak}W
+                  </span>
+                );
+              })() : (
+                <span className="text-gray-400 text-sm">
+                  W{myParticipation.wins}-L{myParticipation.losses}-P{myParticipation.pushes}
+                </span>
+              )}
             </div>
             {myPick ? (
               <div className="text-sm text-gray-300 mt-0.5 truncate">
@@ -222,8 +233,14 @@ export function PoolDetailClient({
                 </div>
                 <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
                   <Clock size={14} className="text-yellow-400" />
-                  <span className="text-gray-400 text-sm">Currently on</span>
-                  <span className="text-white font-bold text-sm">Round {latestRoundNumber}</span>
+                  {isStreakRace ? (
+                    <span className="text-gray-400 text-sm">First to <span className="text-white font-bold">{pool.target_streak} in a row</span> wins</span>
+                  ) : (
+                    <>
+                      <span className="text-gray-400 text-sm">Currently on</span>
+                      <span className="text-white font-bold text-sm">Round {latestRoundNumber}</span>
+                    </>
+                  )}
                   {initialCurrentRound && (
                     <>
                       <span className="text-gray-600">·</span>
@@ -240,7 +257,9 @@ export function PoolDetailClient({
                 { label: 'Entries', value: participants.length, icon: Users },
                 { label: 'Alive', value: aliveCount, icon: Zap },
                 { label: 'Eliminated', value: eliminatedCount, icon: Target },
-                { label: 'Round', value: latestRoundNumber, icon: Trophy },
+                isStreakRace
+                  ? { label: 'Target', value: `${pool.target_streak}W`, icon: Trophy }
+                  : { label: 'Round', value: latestRoundNumber, icon: Trophy },
               ].map(s => (
                 <Card key={s.label}>
                   <CardBody className="text-center py-3">
@@ -327,7 +346,7 @@ export function PoolDetailClient({
           {/* Picks list — visible after submitting */}
           {picksVisible && (
             <div className="space-y-3">
-              <h3 className="text-lg font-bold text-white">Round {latestRoundNumber} Picks</h3>
+              <h3 className="text-lg font-bold text-white">{isStreakRace ? 'Picks' : `Round ${latestRoundNumber} Picks`}</h3>
               {picks.length === 0 ? (
                 <Card><CardBody className="text-center py-8 text-gray-500">No picks submitted yet.</CardBody></Card>
               ) : (
@@ -382,6 +401,9 @@ export function PoolDetailClient({
                 if (b.status === 'winner' && a.status !== 'winner') return 1;
                 if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
                 if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
+                if (isStreakRace) {
+                  return ((b as any).current_streak ?? 0) - ((a as any).current_streak ?? 0);
+                }
                 return b.wins - a.wins;
               })
               .map((p: any, idx) => {
@@ -400,7 +422,18 @@ export function PoolDetailClient({
                             <span className={`font-bold text-sm ${isElim ? 'text-gray-500' : 'text-white'}`}>
                               {p.profiles?.username ?? 'Unknown'}
                             </span>
-                            <span className="text-xs text-gray-500">W{p.wins}-L{p.losses}-P{p.pushes}</span>
+                            {isStreakRace ? (
+                              (() => {
+                                const s = (p as any).current_streak ?? 0;
+                                return s > 0
+                                  ? <span className="text-xs font-bold text-green-400">{s}W</span>
+                                  : s < 0
+                                  ? <span className="text-xs font-bold text-red-400">{Math.abs(s)}L</span>
+                                  : <span className="text-xs text-gray-500">0W</span>;
+                              })()
+                            ) : (
+                              <span className="text-xs text-gray-500">W{p.wins}-L{p.losses}-P{p.pushes}</span>
+                            )}
                           </div>
                           {pick ? (
                             <div className="text-xs mt-0.5">

@@ -324,7 +324,7 @@ export function PoolDetailClient({
                       <span className="text-white font-bold text-sm">Round {latestRoundNumber}</span>
                     </>
                   )}
-                  {initialCurrentRound && (
+                  {initialCurrentRound && !isStreakRace && (
                     <>
                       <span className="text-gray-600">·</span>
                       <span className="text-gray-400 text-sm">picks due</span>

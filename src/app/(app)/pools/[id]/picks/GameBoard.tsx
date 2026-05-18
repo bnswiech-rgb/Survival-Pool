@@ -46,7 +46,9 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
   const [selectedPick, setSelectedPick] = useState<GamePick | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<'all' | 'spread' | 'total' | 'moneyline'>('all');
-  const [sportFilter, setSportFilter] = useState<string>('All');
+  const [sportFilter, setSportFilter] = useState<string>(
+    SPORTS.includes(pool.sport as any) ? pool.sport : 'All'
+  );
 
   useEffect(() => {
     fetchGames();
@@ -163,7 +165,8 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
             </div>
           )}
 
-          {/* Sport tabs */}
+          {/* Sport tabs — hidden when pool is locked to a specific sport */}
+          {!SPORTS.includes(pool.sport as any) && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin mb-2">
             {SPORTS.map(s => (
               <button
@@ -179,6 +182,7 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
               </button>
             ))}
           </div>
+          )}
 
           {/* Pick type filter tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">

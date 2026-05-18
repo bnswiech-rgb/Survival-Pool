@@ -27,12 +27,21 @@ const SPORT_KEYS: Record<string, string[]> = {
 const ALL_KEYS = Object.values(SPORT_KEYS).flat();
 
 function getEligibleRange(): { start: Date; end: Date } {
-  // Show games from now through end of tomorrow (UTC)
   const now = new Date();
-  const end = new Date(now);
-  end.setUTCDate(now.getUTCDate() + 2);
-  end.setUTCHours(0, 0, 0, 0);
-  return { start: now, end };
+
+  // Get current date in ET (UTC-4 during EDT)
+  const etOffset = -4 * 60; // EDT in minutes
+  const etNow = new Date(now.getTime() + etOffset * 60000);
+
+  // End of today in ET = midnight ET = 4:00 AM UTC next day
+  const endET = new Date(Date.UTC(
+    etNow.getUTCFullYear(),
+    etNow.getUTCMonth(),
+    etNow.getUTCDate() + 1,
+    4, 0, 0, 0  // midnight ET = 4 AM UTC
+  ));
+
+  return { start: now, end: endET };
 }
 
 export async function GET(request: NextRequest) {

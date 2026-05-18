@@ -65,11 +65,19 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Create first round
+  // Create first round — deadline is tonight at 9:30 PM ET (1:30 AM UTC next day)
+  // If that's already passed, use tomorrow at 9:30 PM ET
+  const now = new Date();
+  const tonightDeadline = new Date();
+  tonightDeadline.setUTCHours(1, 30, 0, 0); // 9:30 PM EDT = 01:30 UTC
+  if (tonightDeadline <= now) {
+    tonightDeadline.setUTCDate(tonightDeadline.getUTCDate() + 1);
+  }
+
   await supabase.from('rounds').insert({
     pool_id: pool.id,
     round_number: 1,
-    deadline: pick_deadline,
+    deadline: tonightDeadline.toISOString(),
     status: 'open',
   });
 

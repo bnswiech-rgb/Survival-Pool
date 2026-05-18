@@ -105,14 +105,25 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
             )}
           </div>
 
-          {/* Deadline */}
-          <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-auto">
-            <Clock size={13} />
-            <span>Deadline: </span>
-            <CountdownTimer deadline={pool.pick_deadline} />
-          </div>
+          {/* Deadline or leader streak */}
+          {pool.contest_format === 'streak_race' ? (
+            <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-auto">
+              <span>Leader: </span>
+              <span className="text-green-400 font-bold">
+                {(pool as any).leader_streak > 0 ? `${(pool as any).leader_streak}W` : 'No picks yet'}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-auto">
+              <Clock size={13} />
+              <span>Deadline: </span>
+              <CountdownTimer deadline={pool.pick_deadline} />
+            </div>
+          )}
 
-          {showJoin && (pool.status === 'open' || pool.status === 'upcoming') && (
+          {showJoin && (pool.contest_format === 'streak_race'
+            ? pool.status !== 'completed' && pool.status !== 'canceled'
+            : pool.status === 'open' || pool.status === 'upcoming') && (
             <div className="bg-green-500 hover:bg-green-400 text-black text-sm font-bold px-4 py-2 rounded-lg text-center transition-colors mt-1">
               View Contest
             </div>

@@ -200,7 +200,7 @@ export function PoolDetailClient({
           </div>
           <div className="text-gray-400">{pool.sport}</div>
         </div>
-        {!myParticipation && (pool.status === 'open' || pool.status === 'upcoming') && currentUser && (
+        {!myParticipation && (pool.status === 'open' || pool.status === 'upcoming' || (pool.contest_format === 'streak_race' && pool.status === 'active')) && currentUser && (
           <Button onClick={handleJoin} loading={joiningLoading} size="lg">
             Join Contest {pool.entry_fee_cents > 0 ? `• ${formatCents(pool.entry_fee_cents)}` : '• Free'}
           </Button>

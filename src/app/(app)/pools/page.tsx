@@ -20,7 +20,7 @@ export default async function PoolsPage({ searchParams }: Props) {
 
   let query = supabase
     .from('pools')
-    .select('*, pool_participants(count)')
+    .select('*, pool_participants(current_streak, status)')
     .eq('visibility', 'public')
     .order('created_at', { ascending: false });
 
@@ -31,10 +31,12 @@ export default async function PoolsPage({ searchParams }: Props) {
 
   const { data: pools } = await query.limit(50);
 
-  const enrichedPools = pools?.map((p: any) => ({
-    ...p,
-    participant_count: p.pool_participants?.[0]?.count ?? 0,
-  })) ?? [];
+  const enrichedPools = pools?.map((p: any) => {
+    const participants = p.pool_participants ?? [];
+    const participant_count = participants.length;
+    const leader_streak = participants.reduce((max: number, pp: any) => Math.max(max, pp.current_streak ?? 0), 0);
+    return { ...p, participant_count, leader_streak };
+  }) ?? [];
 
   return (
     <div className="space-y-6">

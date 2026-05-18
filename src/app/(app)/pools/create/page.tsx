@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import type { ContestFormat } from '@/types';
 import { ChevronRight, ChevronLeft, Trophy } from 'lucide-react';
 
-const SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'CFB', 'CBB', 'Soccer', 'UFC', 'WNBA', 'Other'];
+const SPORTS = ['NBA', 'WNBA', 'MLB', 'NHL', 'ATP', 'WTA'];
 const FORMATS: { value: ContestFormat; label: string; desc: string }[] = [
   { value: 'classic', label: 'Classic Survival', desc: 'One life. Lose once, you\'re out.' },
   { value: 'lives', label: 'Lives Mode', desc: 'Multiple lives. Survive until all lives are gone.' },

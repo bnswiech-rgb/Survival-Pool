@@ -110,12 +110,12 @@ export function StandingsTable({ participants, pool }: Props) {
                   </td>
                   <td className="px-4 py-3">
                     <Link
-                      href={`/profile/${p.profile?.username ?? ''}`}
+                      href={`/profile/${(p as any).profiles?.username ?? ''}`}
                       className="flex items-center gap-2 hover:text-green-400 transition-colors"
                     >
-                      <Avatar src={p.profile?.avatar_url} username={p.profile?.username ?? '?'} size="xs" />
+                      <Avatar src={(p as any).profiles?.avatar_url} username={(p as any).profiles?.username ?? '?'} size="xs" />
                       <span className={`font-medium ${isEliminated ? 'text-gray-500' : 'text-white'}`}>
-                        {p.profile?.username ?? 'Unknown'}
+                        {(p as any).profiles?.username ?? 'Unknown'}
                       </span>
                     </Link>
                   </td>

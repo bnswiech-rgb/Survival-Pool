@@ -11,7 +11,7 @@ export default async function PoolDetailPage({ params }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: pool }, { data: participants }, { data: currentRound }] = await Promise.all([
+  const [{ data: pool }, { data: participants }, { data: currentRound }, { data: latestRound }] = await Promise.all([
     supabase.from('pools').select('*').eq('id', id).single(),
     supabase
       .from('pool_participants')
@@ -23,6 +23,13 @@ export default async function PoolDetailPage({ params }: Props) {
       .select('*')
       .eq('pool_id', id)
       .in('status', ['open', 'locked', 'grading'])
+      .order('round_number', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('rounds')
+      .select('round_number')
+      .eq('pool_id', id)
       .order('round_number', { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -73,6 +80,7 @@ export default async function PoolDetailPage({ params }: Props) {
       pool={pool}
       initialParticipants={(participants as any) ?? []}
       initialCurrentRound={currentRound}
+      latestRoundNumber={latestRound?.round_number ?? 1}
       initialMyPick={myPick}
       myParticipation={myParticipation}
       currentUser={currentUser}

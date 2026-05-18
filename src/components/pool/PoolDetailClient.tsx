@@ -17,6 +17,7 @@ interface Props {
   pool: Pool;
   initialParticipants: PoolParticipant[];
   initialCurrentRound: Round | null;
+  latestRoundNumber: number;
   initialMyPick: Pick | null;
   myParticipation: PoolParticipant | null;
   currentUser: Profile | null;
@@ -29,6 +30,7 @@ export function PoolDetailClient({
   pool,
   initialParticipants,
   initialCurrentRound,
+  latestRoundNumber,
   initialMyPick,
   myParticipation: initMy,
   currentUser,
@@ -194,13 +196,18 @@ export function PoolDetailClient({
                     <span className="text-green-400 font-bold">{aliveCount}</span> survivor{aliveCount !== 1 ? 's' : ''} remaining
                   </p>
                 </div>
-                {initialCurrentRound && (
-                  <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
-                    <Clock size={14} className="text-yellow-400" />
-                    <span className="text-gray-400 text-sm">Round {initialCurrentRound.round_number} picks due:</span>
-                    <CountdownTimer deadline={initialCurrentRound.deadline} />
-                  </div>
-                )}
+                <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
+                  <Clock size={14} className="text-yellow-400" />
+                  <span className="text-gray-400 text-sm">Currently on</span>
+                  <span className="text-white font-bold text-sm">Round {latestRoundNumber}</span>
+                  {initialCurrentRound && (
+                    <>
+                      <span className="text-gray-600">·</span>
+                      <span className="text-gray-400 text-sm">picks due</span>
+                      <CountdownTimer deadline={initialCurrentRound.deadline} />
+                    </>
+                  )}
+                </div>
               </CardBody>
             </Card>
 

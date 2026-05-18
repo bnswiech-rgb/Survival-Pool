@@ -12,7 +12,11 @@ export async function POST(request: NextRequest) {
       'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({
+      email,
+      gotrue_meta_security: {},
+      redirect_to: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://survival-pool-swick-s-projects.vercel.app'}/reset-password`,
+    }),
   });
 
   if (!res.ok) {

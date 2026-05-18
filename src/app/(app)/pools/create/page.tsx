@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import type { ContestFormat } from '@/types';
 import { ChevronRight, ChevronLeft, Trophy } from 'lucide-react';
 
-const SPORTS = ['NBA', 'WNBA', 'MLB', 'NHL', 'ATP', 'WTA'];
+const SPORTS = ['All Sports', 'NBA', 'WNBA', 'MLB', 'NHL', 'ATP', 'WTA'];
 const FORMATS: { value: ContestFormat; label: string; desc: string }[] = [
   { value: 'classic', label: 'Classic Survival', desc: 'One life. Lose once, you\'re out.' },
   { value: 'lives', label: 'Lives Mode', desc: 'Multiple lives. Survive until all lives are gone.' },
@@ -30,7 +30,7 @@ export default function CreatePoolPage() {
 
   // Step 1: Basic Info
   const [name, setName] = useState('');
-  const [sport, setSport] = useState('NBA');
+  const [sport, setSport] = useState('All Sports');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [maxEntries, setMaxEntries] = useState('');
 

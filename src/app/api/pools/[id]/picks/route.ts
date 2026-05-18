@@ -22,12 +22,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Filter hidden picks (before deadline, not own, not admin)
-  const { data: pool } = await supabase.from('pools').select('pick_deadline').eq('id', id).single();
   const { data: profile } = user
     ? await supabase.from('profiles').select('role').eq('id', user.id).single()
     : { data: null };
 
-  const isDeadlinePassed = pool ? new Date(pool.pick_deadline) < new Date() : false;
+  let isDeadlinePassed = false;
+  if (roundId) {
+    const { data: round } = await supabase.from('rounds').select('deadline').eq('id', roundId).single();
+    isDeadlinePassed = round ? new Date(round.deadline) < new Date() : false;
+  } else {
+    const { data: pool } = await supabase.from('pools').select('pick_deadline').eq('id', id).single();
+    isDeadlinePassed = pool ? new Date(pool.pick_deadline) < new Date() : false;
+  }
   const isAdmin = profile?.role === 'admin';
 
   const filtered = data?.filter((pick: any) => {

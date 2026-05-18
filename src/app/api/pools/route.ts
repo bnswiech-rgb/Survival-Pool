@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
+  const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
   const { data: pool, error } = await supabase.from('pools').insert({
     name,
     sport,
@@ -61,6 +63,7 @@ export async function POST(request: NextRequest) {
     prize_structure: prize_structure ?? 'winner_take_all',
     status: 'open',
     created_by: user.id,
+    invite_code: inviteCode,
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

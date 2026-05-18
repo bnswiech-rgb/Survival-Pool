@@ -291,6 +291,25 @@ export function PoolDetailClient({
                 <div className="flex justify-between"><span className="text-gray-400">Frequency</span><span className="text-white capitalize">{pool.round_frequency}</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">Prize</span><span className="text-white capitalize">{pool.prize_structure.replace(/_/g, ' ')}</span></div>
                 {pool.max_entries && <div className="flex justify-between"><span className="text-gray-400">Max entries</span><span className="text-white">{pool.max_entries}</span></div>}
+                {currentUser?.id === pool.created_by && pool.visibility === 'private' && (pool as any).invite_code && (
+                  <div className="pt-2 border-t border-gray-800">
+                    <div className="text-xs text-gray-400 mb-1">Invite Link</div>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs text-green-400 bg-gray-800 px-2 py-1 rounded flex-1 truncate">
+                        {typeof window !== 'undefined' ? window.location.origin : ''}/invite/{(pool as any).invite_code}
+                      </code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/invite/${(pool as any).invite_code}`);
+                          toast.success('Invite link copied!');
+                        }}
+                        className="text-xs text-gray-400 hover:text-white px-2 py-1 border border-gray-700 rounded"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                )}
               </CardBody>
             </Card>
             <Card>

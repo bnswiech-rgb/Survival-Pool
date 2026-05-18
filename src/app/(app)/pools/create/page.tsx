@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { formatCents, calculatePrizePool, getContestFormatLabel } from '@/lib/utils';
+import { getContestFormatLabel } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import type { ContestFormat } from '@/types';
 import { ChevronRight, ChevronLeft, Trophy } from 'lucide-react';
@@ -42,9 +42,8 @@ export default function CreatePoolPage() {
   const [maxLosses, setMaxLosses] = useState('');
   const [pushResetsStreak, setPushResetsStreak] = useState(false);
 
-  // Step 3: Entry & Prize
-  const [entryFeeDollars, setEntryFeeDollars] = useState('0');
-  const [rakePercentage, setRakePercentage] = useState('10');
+  // Step 3: Entry & Prize — locked free during beta
+  const rakePercentage = '10';
 
   // Step 4: Schedule
   const [startDate, setStartDate] = useState('');
@@ -54,9 +53,6 @@ export default function CreatePoolPage() {
   const [pushRule, setPushRule] = useState<'advance' | 'eliminate' | 'repeat'>('advance');
   const [allLoseRule, setAllLoseRule] = useState<'repeat' | 'split' | 'tiebreak'>('repeat');
 
-  const entryFeeCents = Math.round(parseFloat(entryFeeDollars || '0') * 100);
-  const mockEntries = 10;
-  const { netPrizePool, platformFee } = calculatePrizePool(entryFeeCents, mockEntries, parseFloat(rakePercentage || '10'));
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -74,7 +70,7 @@ export default function CreatePoolPage() {
         target_streak: parseInt(targetStreak),
         max_losses: maxLosses ? parseInt(maxLosses) : null,
         push_resets_streak: pushResetsStreak,
-        entry_fee_cents: entryFeeCents,
+        entry_fee_cents: 0,
         rake_percentage: parseFloat(rakePercentage),
         start_date: new Date(`${startDate}T00:00:00`).toISOString(),
         round_frequency: roundFrequency,
@@ -208,47 +204,11 @@ export default function CreatePoolPage() {
         <Card>
           <CardHeader><h3 className="font-bold text-white">Entry Fee & Prize</h3></CardHeader>
           <CardBody className="space-y-4">
-            <Input
-              label="Entry Fee (USD, 0 for free)"
-              type="number"
-              value={entryFeeDollars}
-              onChange={e => setEntryFeeDollars(e.target.value)}
-              min="0"
-              step="1"
-              placeholder="0"
-            />
-            <Input
-              label="Platform Rake (%)"
-              type="number"
-              value={rakePercentage}
-              onChange={e => setRakePercentage(e.target.value)}
-              min="0"
-              max="30"
-              step="0.5"
-              hint="Percentage taken before distributing prizes"
-            />
-            {entryFeeCents > 0 && (
-              <div className="bg-gray-800 rounded-xl p-4 space-y-2 text-sm">
-                <div className="font-bold text-white mb-2">Prize Preview ({mockEntries} entries)</div>
-                <div className="flex justify-between text-gray-400">
-                  <span>Gross pot</span>
-                  <span>{formatCents(entryFeeCents * mockEntries)}</span>
-                </div>
-                <div className="flex justify-between text-gray-400">
-                  <span>Platform fee ({rakePercentage}%)</span>
-                  <span>-{formatCents(platformFee)}</span>
-                </div>
-                <div className="flex justify-between text-green-400 font-bold border-t border-gray-700 pt-2">
-                  <span>Net prize pool</span>
-                  <span>{formatCents(netPrizePool)}</span>
-                </div>
-              </div>
-            )}
-            {entryFeeCents === 0 && (
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-blue-400 text-sm">
-                Free contest — no entry fee required. Great for friendly competitions!
-              </div>
-            )}
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-center">
+              <div className="text-2xl mb-2">🎉</div>
+              <div className="font-bold text-white mb-1">Free During Beta</div>
+              <div className="text-sm text-gray-400">All contests are free to enter during the testing phase. Paid entry fees will be available in a future update.</div>
+            </div>
           </CardBody>
         </Card>
       )}
@@ -341,8 +301,7 @@ export default function CreatePoolPage() {
                 { label: 'Sport', value: sport },
                 { label: 'Format', value: getContestFormatLabel(contestFormat) },
                 { label: 'Visibility', value: visibility },
-                { label: 'Entry Fee', value: entryFeeCents > 0 ? formatCents(entryFeeCents) : 'Free' },
-                { label: 'Rake', value: `${rakePercentage}%` },
+                { label: 'Entry Fee', value: 'Free' },
                 { label: 'Start Date', value: startDate ? new Date(`${startDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
                 { label: 'Frequency', value: roundFrequency },
                 { label: 'Push Rule', value: pushRule },

@@ -7,6 +7,7 @@ const SPORT_KEYS: Record<string, string[]> = {
   NBA:  ['basketball_nba'],
   WNBA: ['basketball_wnba'],
   MLB:  ['baseball_mlb'],
+  NHL:  ['icehockey_nhl'],
   ATP:  [
     'tennis_atp_french_open',
     'tennis_atp_wimbledon',

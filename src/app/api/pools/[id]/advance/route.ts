@@ -113,7 +113,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   // Process results
-  const updates = processRoundResults(
+  const { updates } = processRoundResults(
     participants as any,
     picksMap,
     {

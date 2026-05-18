@@ -8,6 +8,7 @@ const GRADEABLE_SPORT_KEYS = [
   'basketball_nba',
   'basketball_wnba',
   'baseball_mlb',
+  'icehockey_nhl',
 ];
 
 const DEADLINE_SPORT_KEYS = [
@@ -220,6 +221,115 @@ export async function GET(request: NextRequest) {
     if (!error) {
       gradedCount++;
       gradedRoundIds.add(pick.round_id);
+    }
+  }
+
+  // --- Tennis grading via ESPN ---
+  const tennisPicks = (pendingPicks as any[]).filter((p: any) =>
+    typeof p.league === 'string' && p.league.startsWith('tennis_'),
+  );
+
+  if (tennisPicks.length > 0) {
+    // Determine ESPN league (atp or wta) for each pending tennis pick
+    function espnLeagueForKey(leagueKey: string): 'atp' | 'wta' | null {
+      if (leagueKey.includes('_wta')) return 'wta';
+      if (leagueKey.includes('_atp')) return 'atp';
+      return null;
+    }
+
+    // Build date strings for today and yesterday
+    function toESPNDate(d: Date): string {
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return `${y}${m}${day}`;
+    }
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(today.getUTCDate() - 1);
+    const datesToFetch = [toESPNDate(yesterday), toESPNDate(today)];
+
+    // Cache ESPN events per league+date
+    const espnEventsCache: Record<string, any[]> = {};
+
+    async function fetchESPNEvents(espnLeague: 'atp' | 'wta', dateStr: string): Promise<any[]> {
+      const cacheKey = `${espnLeague}_${dateStr}`;
+      if (espnEventsCache[cacheKey]) return espnEventsCache[cacheKey];
+      try {
+        const res = await fetch(
+          `https://site.api.espn.com/apis/site/v2/sports/tennis/${espnLeague}/scoreboard?dates=${dateStr}`,
+          { cache: 'no-store' },
+        );
+        if (!res.ok) { espnEventsCache[cacheKey] = []; return []; }
+        const json = await res.json();
+        const events = Array.isArray(json?.events) ? json.events : [];
+        espnEventsCache[cacheKey] = events;
+        return events;
+      } catch {
+        espnEventsCache[cacheKey] = [];
+        return [];
+      }
+    }
+
+    for (const pick of tennisPicks) {
+      const espnLeague = espnLeagueForKey(pick.league);
+      if (!espnLeague) continue;
+
+      let matchedEvent: any = null;
+      for (const dateStr of datesToFetch) {
+        const events = await fetchESPNEvents(espnLeague, dateStr);
+        for (const event of events) {
+          const competition = event.competitions?.[0];
+          if (!competition) continue;
+          if (!competition.status?.type?.completed) continue;
+          const competitors = competition.competitors ?? [];
+          if (competitors.length < 2) continue;
+
+          const homeComp = competitors.find((c: any) => c.order === 2) ?? competitors[1];
+          const awayComp = competitors.find((c: any) => c.order === 1) ?? competitors[0];
+          const homeName = homeComp?.athlete?.displayName ?? '';
+          const awayName = awayComp?.athlete?.displayName ?? '';
+
+          if (teamsMatch(pick.game, homeName, awayName)) {
+            matchedEvent = { competition, homeName, awayName };
+            break;
+          }
+        }
+        if (matchedEvent) break;
+      }
+
+      if (!matchedEvent) continue;
+
+      const { competition, homeName, awayName } = matchedEvent;
+      const competitors = competition.competitors ?? [];
+      const homeComp = competitors.find((c: any) => {
+        const n = (c.athlete?.displayName ?? '').toLowerCase();
+        return n === homeName.toLowerCase();
+      }) ?? competitors.find((c: any) => c.order === 2) ?? competitors[1];
+      const awayComp = competitors.find((c: any) => {
+        const n = (c.athlete?.displayName ?? '').toLowerCase();
+        return n === awayName.toLowerCase();
+      }) ?? competitors.find((c: any) => c.order === 1) ?? competitors[0];
+
+      if (!homeComp || !awayComp) continue;
+
+      const winner = homeComp.winner ? homeName : awayComp.winner ? awayName : null;
+      if (!winner) continue;
+
+      // Determine result by matching pick.side against the winner's name
+      const pickedWinner = sideMatchesTeam(pick.side, winner);
+      const result: 'won' | 'lost' = pickedWinner ? 'won' : 'lost';
+
+      const { error } = await supabase
+        .from('picks')
+        .update({ status: result, graded_at: new Date().toISOString(), is_locked: true })
+        .eq('id', pick.id);
+
+      if (!error) {
+        gradedCount++;
+        gradedRoundIds.add(pick.round_id);
+      }
     }
   }
 

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Trophy, Shield, Zap, Users, Star, Target, TrendingUp, Award } from 'lucide-react';
 import { Navbar } from '@/components/nav/Navbar';
 import { createClient } from '@/lib/supabase/server';
+import { AuthHashHandler } from '@/components/AuthHashHandler';
 
 const features = [
   { icon: Shield, title: 'Classic Survival', desc: 'One pick per round. Lose once, you\'re out. Last survivor wins.', color: 'text-green-400' },
@@ -29,6 +30,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-gray-950">
+      <AuthHashHandler />
       <Navbar profile={profile} />
 
       {/* Hero */}

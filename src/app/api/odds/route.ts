@@ -26,14 +26,13 @@ const SPORT_KEYS: Record<string, string[]> = {
 // All supported sport keys combined
 const ALL_KEYS = Object.values(SPORT_KEYS).flat();
 
-function getTomorrowRange(): { start: Date; end: Date } {
+function getEligibleRange(): { start: Date; end: Date } {
+  // Show games from now through end of tomorrow (UTC)
   const now = new Date();
-  const start = new Date(now);
-  start.setUTCDate(now.getUTCDate() + 1);
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setUTCDate(start.getUTCDate() + 1);
-  return { start, end };
+  const end = new Date(now);
+  end.setUTCDate(now.getUTCDate() + 2);
+  end.setUTCHours(0, 0, 0, 0);
+  return { start: now, end };
 }
 
 export async function GET(request: NextRequest) {
@@ -45,7 +44,7 @@ export async function GET(request: NextRequest) {
   }
 
   const keysToFetch = sport === 'All' ? ALL_KEYS : (SPORT_KEYS[sport] ?? ALL_KEYS);
-  const { start: tomorrowStart, end: tomorrowEnd } = getTomorrowRange();
+  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange();
 
   const allGames: any[] = [];
 

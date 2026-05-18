@@ -46,6 +46,7 @@ export interface Pool {
   max_losses: number | null;
   contest_duration_rounds: number | null;
   push_resets_streak: boolean;
+  tiebreaker_active: boolean;
   team_scoring: string | null;
   created_by: string;
   created_at: string;

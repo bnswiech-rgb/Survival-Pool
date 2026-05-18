@@ -266,7 +266,7 @@ export async function GET(request: NextRequest) {
     const picksMap = new Map<string, PickStatus>();
     for (const pick of picks ?? []) picksMap.set(pick.user_id, pick.status as PickStatus);
 
-    const updates = processRoundResults(
+    const { updates, startTiebreaker } = processRoundResults(
       participants as any,
       picksMap,
       {
@@ -278,9 +278,14 @@ export async function GET(request: NextRequest) {
         target_streak: pool.target_streak,
         max_losses: pool.max_losses,
         push_resets_streak: pool.push_resets_streak,
+        tiebreaker_active: pool.tiebreaker_active ?? false,
       },
       round.round_number,
     );
+
+    if (startTiebreaker) {
+      await supabase.from('pools').update({ tiebreaker_active: true }).eq('id', round.pool_id);
+    }
 
     // Apply participant updates and activity feed
     for (const [participantId, update] of updates) {
@@ -331,7 +336,15 @@ export async function GET(request: NextRequest) {
     const alive = (remaining ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status));
 
     if (alive.length <= 1 || winners.length > 0) {
-      await supabase.from('pools').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', round.pool_id);
+      // In tiebreaker mode, the last surviving player needs to be crowned winner
+      if (pool.tiebreaker_active && alive.length === 1) {
+        await supabase
+          .from('pool_participants')
+          .update({ status: 'winner' })
+          .eq('pool_id', round.pool_id)
+          .in('status', ['active', 'advanced']);
+      }
+      await supabase.from('pools').update({ status: 'completed', tiebreaker_active: false, updated_at: new Date().toISOString() }).eq('id', round.pool_id);
     } else {
       const nextDeadline = await getNextRoundDeadline(pool.round_frequency);
       await supabase.from('rounds').insert({

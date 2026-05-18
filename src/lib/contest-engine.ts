@@ -201,9 +201,10 @@ export function processRoundResults(
     target_streak: number;
     max_losses: number | null;
     push_resets_streak: boolean;
+    tiebreaker_active?: boolean;
   },
   roundNumber: number
-): Map<string, ParticipantUpdate> {
+): { updates: Map<string, ParticipantUpdate>; startTiebreaker: boolean } {
   const updates = new Map<string, ParticipantUpdate>();
   for (const participant of participants) {
     const pickStatus = picks.get(participant.id) || 'lost';
@@ -222,7 +223,12 @@ export function processRoundResults(
         update = processBestRecordResult(participant, pickStatus);
         break;
       case 'streak_race':
-        update = processStreakRaceResult(participant, pickStatus, pool.target_streak, pool.push_resets_streak, roundNumber);
+        // In tiebreaker mode, use classic survival (1 loss = eliminated)
+        if (pool.tiebreaker_active) {
+          update = processClassicSurvivalResult(participant, pickStatus, pool.push_rule, roundNumber);
+        } else {
+          update = processStreakRaceResult(participant, pickStatus, pool.target_streak, pool.push_resets_streak, roundNumber);
+        }
         break;
       case 'team_battle':
         update = processTeamBattleResult(participant, pickStatus, pool.push_rule, roundNumber);
@@ -233,19 +239,39 @@ export function processRoundResults(
     updates.set(participant.id, update);
   }
 
-  // Check all-lose scenario
-  const allLost = participants.every(p => {
-    const update = updates.get(p.id);
-    return update?.status === 'eliminated';
-  });
-
-  if (allLost && pool.all_lose_rule === 'repeat') {
-    // Reset all to active, preserve losses
-    for (const [id] of updates) {
-      const orig = participants.find(p => p.id === id)!;
-      updates.set(id, { ...updates.get(id)!, status: 'active', eliminated_round: undefined, losses: orig.losses + 1 });
+  // Streak race: detect simultaneous winners → start tiebreaker
+  let startTiebreaker = false;
+  if (pool.contest_format === 'streak_race' && !pool.tiebreaker_active) {
+    const tiedWinners = [...updates.entries()].filter(([, u]) => u.isWinner);
+    if (tiedWinners.length > 1) {
+      startTiebreaker = true;
+      const winnerIds = new Set(tiedWinners.map(([id]) => id));
+      for (const [id, update] of updates) {
+        if (winnerIds.has(id)) {
+          // Keep tied players alive for sudden death — don't crown yet
+          updates.set(id, { ...update, status: 'advanced', isWinner: false });
+        } else {
+          // Eliminate everyone who didn't reach the target
+          updates.set(id, { ...update, status: 'eliminated', eliminated_round: roundNumber });
+        }
+      }
     }
   }
 
-  return updates;
+  // Check all-lose scenario (skip during tiebreaker — someone must go out)
+  if (!startTiebreaker && !pool.tiebreaker_active) {
+    const allLost = participants.every(p => {
+      const update = updates.get(p.id);
+      return update?.status === 'eliminated';
+    });
+
+    if (allLost && pool.all_lose_rule === 'repeat') {
+      for (const [id] of updates) {
+        const orig = participants.find(p => p.id === id)!;
+        updates.set(id, { ...updates.get(id)!, status: 'active', eliminated_round: undefined, losses: orig.losses + 1 });
+      }
+    }
+  }
+
+  return { updates, startTiebreaker };
 }

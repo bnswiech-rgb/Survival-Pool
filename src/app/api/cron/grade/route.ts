@@ -489,6 +489,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     graded: gradedCount,
     advancedRounds: advancedRounds.length,
+    overdueRoundsFound: (overdueRounds ?? []).length,
     timestamp: new Date().toISOString(),
   });
 }

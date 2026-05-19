@@ -28,7 +28,7 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
       const res = await fetch('/api/cron/grade');
       const data = await res.json();
       if (data.error) toast.error(data.error);
-      else toast.success(`Graded ${data.graded ?? 0} picks, advanced ${data.advancedRounds ?? 0} rounds`);
+      else toast.success(`Graded ${data.graded ?? 0} picks, advanced ${data.advancedRounds ?? 0} rounds, found ${data.overdueRoundsFound ?? 0} overdue rounds`);
     } catch {
       toast.error('Failed to run grader');
     }

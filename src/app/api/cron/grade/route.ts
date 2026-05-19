@@ -159,7 +159,6 @@ export async function GET(request: NextRequest) {
     .lt('game_start_time', cutoff);
 
   if (picksError) return NextResponse.json({ error: picksError.message }, { status: 500 });
-  if (!pendingPicks?.length) return NextResponse.json({ message: 'No picks to grade', graded: 0 });
 
   // Fetch scores from The Odds API for each sport with pending picks
   const sportKeys = [
@@ -185,7 +184,7 @@ export async function GET(request: NextRequest) {
   const gradedRoundIds = new Set<string>();
 
   // Grade each pending pick
-  for (const pick of pendingPicks as any[]) {
+  for (const pick of (pendingPicks ?? []) as any[]) {
     const scores = scoresMap[pick.league];
     if (!scores) continue; // tennis or sport without score data — skip for now
 
@@ -328,7 +327,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // For each round that had picks graded, check if all picks are done and auto-advance
+  // Also include any open rounds past their deadline that weren't caught above
+  const { data: overdueRounds } = await supabase
+    .from('rounds')
+    .select('id')
+    .neq('status', 'completed')
+    .lt('deadline', new Date().toISOString());
+  for (const r of overdueRounds ?? []) gradedRoundIds.add(r.id);
+
+  // For each round that had picks graded (or is overdue), check if all picks are done and auto-advance
   const advancedRounds: string[] = [];
 
   for (const roundId of gradedRoundIds) {

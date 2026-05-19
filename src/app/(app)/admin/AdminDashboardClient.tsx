@@ -181,7 +181,7 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
       {activeTab === 'Grade Picks' && (
         <div className="space-y-3">
           {picks.length === 0 ? (
-            <Card><CardBody className="text-center py-8 text-gray-500">No pending picks to grade.</CardBody></Card>
+            <Card><CardBody className="text-center py-8 text-gray-500">No picks found.</CardBody></Card>
           ) : (
             picks.map((pick: any) => (
               <Card key={pick.id}>
@@ -192,10 +192,13 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                         <span className="font-bold text-white">{pick.profiles?.username}</span>
                         <span className="text-gray-400 text-sm">in {pick.pools?.name}</span>
                         <Badge variant="gray">Round {pick.rounds?.round_number}</Badge>
+                        <Badge variant={pick.status === 'won' ? 'green' : pick.status === 'lost' ? 'red' : pick.status === 'push' ? 'blue' : 'yellow'}>
+                          {pick.status}
+                        </Badge>
                       </div>
                       <div className="text-sm text-gray-300 mt-1">{pick.game}</div>
                       <div className="text-sm text-white font-medium">
-                        {pick.side} ({pick.line_value}) · {pick.american_odds > 0 ? '+' : ''}{pick.american_odds} · {pick.pick_type}
+                        {pick.pick_type === 'moneyline' ? `${pick.side} ML` : pick.pick_type === 'total' ? pick.line_value : `${pick.side} ${pick.line_value}`} · {pick.american_odds > 0 ? '+' : ''}{pick.american_odds}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         Submitted {formatDistanceToNow(new Date(pick.submitted_at), { addSuffix: true })}

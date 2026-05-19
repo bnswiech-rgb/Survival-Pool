@@ -19,9 +19,9 @@ export default async function AdminPage() {
     supabase
       .from('picks')
       .select('*, profiles(username), pools(name), rounds(round_number)')
-      .eq('status', 'pending')
+      .in('status', ['pending', 'won', 'lost', 'push'])
       .order('submitted_at', { ascending: false })
-      .limit(100),
+      .limit(200),
     supabase
       .from('admin_actions')
       .select('*, profiles(username)')

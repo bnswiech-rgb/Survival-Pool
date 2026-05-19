@@ -193,6 +193,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (alive.length <= 1 || winners.length > 0) {
     await supabase.from('pools').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', id);
   } else {
+    if (pool.status === 'open' && pool.contest_format !== 'streak_race') {
+      await supabase.from('pools').update({ status: 'active' }).eq('id', id);
+    }
     // Deadline = latest game start time for the next day, or 9:30 PM ET fallback
     const nextDeadline = await getNextRoundDeadline(pool.round_frequency);
 

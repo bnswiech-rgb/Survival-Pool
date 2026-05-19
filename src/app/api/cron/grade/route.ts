@@ -480,6 +480,10 @@ export async function GET(request: NextRequest) {
       }
       await supabase.from('pools').update({ status: 'completed', tiebreaker_active: false, updated_at: new Date().toISOString() }).eq('id', round.pool_id);
     } else {
+      // Mark pool as active so new entries are blocked for non-streak-race pools
+      if (pool.status === 'open' && pool.contest_format !== 'streak_race') {
+        await supabase.from('pools').update({ status: 'active' }).eq('id', round.pool_id);
+      }
       const nextDeadline = await getNextRoundDeadline(pool.round_frequency);
       await supabase.from('rounds').insert({
         pool_id: round.pool_id,

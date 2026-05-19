@@ -109,6 +109,11 @@ export async function POST(request: NextRequest) {
   // Mark round completed
   await supabase.from('rounds').update({ status: 'completed' }).eq('id', targetRound.id);
 
+  // Mark pool active to block new entries (non-streak-race)
+  if (pool.contest_format !== 'streak_race') {
+    await supabase.from('pools').update({ status: 'active' }).eq('id', pool_id);
+  }
+
   // Create next round
   const nextDeadline = new Date();
   nextDeadline.setUTCDate(nextDeadline.getUTCDate() + 1);

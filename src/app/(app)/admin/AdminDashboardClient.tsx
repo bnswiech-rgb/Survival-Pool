@@ -52,6 +52,18 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     setGradingId(null);
   };
 
+  const resetRound = async (poolId: string) => {
+    const res = await fetch('/api/admin/reset-round', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pool_id: poolId }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error || 'Reset failed'); return; }
+    toast.success('Round reset — running grader...');
+    await runAutoGrade();
+  };
+
   const poolAction = async (poolId: string, action: string) => {
     const res = await fetch(`/api/pools/${poolId}`, {
       method: 'PATCH',
@@ -150,6 +162,9 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => advanceRound(pool.id)}>
                         Advance Round
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => resetRound(pool.id)}>
+                        Reset Round
                       </Button>
                       <Button size="sm" variant="danger" onClick={() => poolAction(pool.id, 'cancel')}>
                         Cancel

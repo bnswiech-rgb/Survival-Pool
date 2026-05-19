@@ -19,14 +19,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
   }
 
-  const { data: pick, error } = await supabase
+  const { error } = await supabase
     .from('picks')
     .update({ status, graded_at: new Date().toISOString(), is_locked: true })
-    .eq('id', pick_id)
-    .select('*, profiles(username)')
-    .single();
+    .eq('id', pick_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const { data: pick } = await supabase
+    .from('picks')
+    .select('*, profiles(username)')
+    .eq('id', pick_id)
+    .single();
 
   // Update participant stats
   const { data: participant } = await supabase

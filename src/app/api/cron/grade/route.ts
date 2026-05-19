@@ -383,7 +383,11 @@ export async function GET(request: NextRequest) {
       .eq('pool_id', round.pool_id)
       .in('status', ['active', 'advanced']);
 
-    if (!participants?.length) continue;
+    if (!participants?.length) {
+      console.log(`[advance] round ${roundId}: no active participants, skipping`);
+      continue;
+    }
+    console.log(`[advance] round ${roundId}: ${participants.length} participants, ${(picks ?? []).length} graded picks`);
 
     // Key picksMap by pool_participants.id (not user_id) to match contest-engine lookup
     const userToParticipantId = new Map<string, string>();
@@ -394,6 +398,7 @@ export async function GET(request: NextRequest) {
       if (participantId) picksMap.set(participantId, pick.status as PickStatus);
     }
 
+    console.log(`[advance] picksMap size: ${picksMap.size}, sample:`, JSON.stringify([...picksMap.entries()].slice(0,3)));
     const { updates, startTiebreaker } = processRoundResults(
       participants as any,
       picksMap,
@@ -411,6 +416,7 @@ export async function GET(request: NextRequest) {
       round.round_number,
     );
 
+    console.log(`[advance] updates size: ${updates.size}, sample:`, JSON.stringify([...updates.entries()].slice(0,3)));
     if (startTiebreaker) {
       await supabase.from('pools').update({ tiebreaker_active: true }).eq('id', round.pool_id);
     }

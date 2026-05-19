@@ -25,20 +25,19 @@ export async function POST(request: NextRequest) {
   const { data: pool } = await supabase.from('pools').select('*').eq('id', pool_id).single();
   if (!pool) return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
 
-  // Find all rounds, pick the one with picks
+  // Find the last COMPLETED round (the one that needs reprocessing)
   const { data: allRounds } = await supabase
-    .from('rounds').select('id, round_number, deadline').eq('pool_id', pool_id).order('round_number', { ascending: true });
+    .from('rounds').select('id, round_number, deadline, status').eq('pool_id', pool_id).order('round_number', { ascending: true });
   if (!allRounds?.length) return NextResponse.json({ error: 'No rounds found' }, { status: 400 });
 
-  let targetRound = allRounds[0];
-  for (const r of allRounds) {
-    const { count } = await supabase.from('picks').select('*', { count: 'exact', head: true }).eq('round_id', r.id);
-    if ((count ?? 0) > 0) { targetRound = r; break; }
-  }
+  // Target = last completed round (not the current open one)
+  const completedRounds = allRounds.filter((r: any) => r.status === 'completed');
+  if (!completedRounds.length) return NextResponse.json({ error: 'No completed rounds to reset' }, { status: 400 });
+  const targetRound = completedRounds[completedRounds.length - 1];
 
-  // Delete rounds after the target
+  // Delete any open rounds after the target (they have no results yet)
   for (const r of allRounds) {
-    if (r.round_number > targetRound.round_number) {
+    if (r.round_number > targetRound.round_number && r.status !== 'completed') {
       await supabase.from('rounds').delete().eq('id', r.id);
     }
   }

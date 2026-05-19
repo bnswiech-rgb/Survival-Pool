@@ -18,20 +18,32 @@ export async function POST(request: NextRequest) {
     .update({ current_streak: 0, wins: 0, losses: 0, pushes: 0, status: 'active', eliminated_round: null })
     .eq('pool_id', pool_id);
 
-  // Reset latest round to open so grader can reprocess it
-  const { data: latestRound } = await supabase
+  // Find the round that actually has picks (the one that needs regrading)
+  const { data: allRounds } = await supabase
     .from('rounds')
     .select('id, round_number')
     .eq('pool_id', pool_id)
-    .order('round_number', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order('round_number', { ascending: true });
 
-  if (latestRound) {
-    await supabase.from('rounds').update({ status: 'open' }).eq('id', latestRound.id);
-    // Reset all picks in this round back to pending so they get regraded
-    await supabase.from('picks').update({ status: 'pending', graded_at: null }).eq('round_id', latestRound.id);
+  if (!allRounds?.length) return NextResponse.json({ error: 'No rounds found' }, { status: 400 });
+
+  // Find which round has picks
+  let targetRound = allRounds[0];
+  for (const r of allRounds) {
+    const { count } = await supabase.from('picks').select('*', { count: 'exact', head: true }).eq('round_id', r.id);
+    if ((count ?? 0) > 0) { targetRound = r; break; }
   }
 
-  return NextResponse.json({ success: true, round: latestRound?.round_number });
+  // Delete any rounds after the target round
+  for (const r of allRounds) {
+    if (r.round_number > targetRound.round_number) {
+      await supabase.from('rounds').delete().eq('id', r.id);
+    }
+  }
+
+  // Reset target round to open and its picks to pending
+  await supabase.from('rounds').update({ status: 'open' }).eq('id', targetRound.id);
+  await supabase.from('picks').update({ status: 'pending', graded_at: null, is_locked: false }).eq('round_id', targetRound.id);
+
+  return NextResponse.json({ success: true, round: targetRound.round_number });
 }

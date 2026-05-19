@@ -56,6 +56,8 @@ export function PoolDetailClient({
   const aliveCount = participants.filter(p => p.status === 'active' || p.status === 'advanced').length;
   const eliminatedCount = participants.filter(p => p.status === 'eliminated').length;
   const isStreakRace = pool.contest_format === 'streak_race';
+  const leaderStreak = isStreakRace ? participants.reduce((max, p) => Math.max(max, (p as any).current_streak ?? 0), 0) : 0;
+  const leadersCount = leaderStreak > 0 ? participants.filter(p => (p as any).current_streak === leaderStreak).length : 0;
 
   // Realtime subscriptions
   useEffect(() => {
@@ -317,7 +319,19 @@ export function PoolDetailClient({
                 <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
                   <Clock size={14} className="text-yellow-400" />
                   {isStreakRace ? (
-                    <span className="text-gray-400 text-sm">First to <span className="text-white font-bold">{pool.target_streak} in a row</span> wins</span>
+                    <span className="text-gray-400 text-sm">
+                      First to <span className="text-white font-bold">{pool.target_streak} in a row</span> wins
+                      {leaderStreak > 0 && (
+                        <span className="ml-2 text-gray-600">·</span>
+                      )}
+                      {leaderStreak > 0 && (
+                        <span className="ml-2">
+                          <span className="text-white font-bold">{leadersCount}</span>
+                          <span> {leadersCount === 1 ? 'person' : 'people'} tied at </span>
+                          <span className="text-green-400 font-bold">{leaderStreak}W</span>
+                        </span>
+                      )}
+                    </span>
                   ) : (
                     <>
                       <span className="text-gray-400 text-sm">Currently on</span>

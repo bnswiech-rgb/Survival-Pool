@@ -1,9 +1,8 @@
 import Link from 'next/link';
-import { Users, Clock } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Progress } from '@/components/ui/Progress';
-import { CountdownTimer } from './CountdownTimer';
 import { formatCents, getContestFormatLabel, calculatePrizePool } from '@/lib/utils';
 import type { Pool } from '@/types';
 
@@ -105,23 +104,20 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
             )}
           </div>
 
-          {/* Deadline or leader streak */}
-          {pool.contest_format === 'streak_race' ? (
-            <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-auto">
-              <span>Leader: </span>
-              <span className="text-green-400 font-bold">
+          {/* Status line */}
+          <div className="flex items-center justify-between text-sm mt-auto">
+            {pool.contest_format === 'streak_race' ? (
+              <span className="text-gray-400">
                 {(pool as any).leader_streak > 0
-                  ? `${(pool as any).leader_name ? `${(pool as any).leader_name} ` : ''}${(pool as any).leader_streak}W`
-                  : 'No winners yet'}
+                  ? <><span className="text-white font-bold">{(pool as any).leaders_count}</span> {(pool as any).leaders_count === 1 ? 'person' : 'people'} at <span className="text-green-400 font-bold">{(pool as any).leader_streak}W</span></>
+                  : 'No picks yet'}
               </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-auto">
-              <Clock size={13} />
-              <span>Deadline: </span>
-              <CountdownTimer deadline={pool.pick_deadline} />
-            </div>
-          )}
+            ) : (
+              <span className="text-gray-400">
+                <span className="text-white font-bold">{(pool as any).alive_count ?? (pool as any).participant_count ?? 0}</span> contestants remain
+              </span>
+            )}
+          </div>
 
           {showJoin && (pool.contest_format === 'streak_race'
             ? pool.status !== 'completed' && pool.status !== 'canceled'

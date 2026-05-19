@@ -34,10 +34,10 @@ export default async function PoolsPage({ searchParams }: Props) {
   const enrichedPools = pools?.map((p: any) => {
     const participants = p.pool_participants ?? [];
     const participant_count = participants.length;
-    const leader = participants.reduce((best: any, pp: any) => (pp.current_streak ?? 0) > (best?.current_streak ?? 0) ? pp : best, null);
-    const leader_streak = leader?.current_streak ?? 0;
-    const leader_name = leader_streak > 0 ? (leader?.profiles?.username ?? null) : null;
-    return { ...p, participant_count, leader_streak, leader_name };
+    const alive_count = participants.filter((pp: any) => pp.status === 'active' || pp.status === 'advanced').length;
+    const leader_streak = participants.reduce((max: number, pp: any) => Math.max(max, pp.current_streak ?? 0), 0);
+    const leaders_count = leader_streak > 0 ? participants.filter((pp: any) => (pp.current_streak ?? 0) === leader_streak).length : 0;
+    return { ...p, participant_count, alive_count, leader_streak, leaders_count };
   }) ?? [];
 
   return (

@@ -20,6 +20,20 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
   const [activeTab, setActiveTab] = useState('Pools');
   const [picks, setPicks] = useState(initialPicks);
   const [gradingId, setGradingId] = useState<string | null>(null);
+  const [autoGrading, setAutoGrading] = useState(false);
+
+  const runAutoGrade = async () => {
+    setAutoGrading(true);
+    try {
+      const res = await fetch('/api/cron/grade');
+      const data = await res.json();
+      if (data.error) toast.error(data.error);
+      else toast.success(`Graded ${data.graded ?? 0} picks, advanced ${data.advancedRounds ?? 0} rounds`);
+    } catch {
+      toast.error('Failed to run grader');
+    }
+    setAutoGrading(false);
+  };
 
   const gradePick = async (pickId: string, status: 'won' | 'lost' | 'push' | 'void') => {
     setGradingId(pickId);
@@ -58,12 +72,17 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield size={28} className="text-purple-400" />
-        <div>
-          <h1 className="text-3xl font-black text-white">Admin Dashboard</h1>
-          <p className="text-gray-400 text-sm">Manage contests, grade picks, track actions.</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Shield size={28} className="text-purple-400" />
+          <div>
+            <h1 className="text-3xl font-black text-white">Admin Dashboard</h1>
+            <p className="text-gray-400 text-sm">Manage contests, grade picks, track actions.</p>
+          </div>
         </div>
+        <Button onClick={runAutoGrade} loading={autoGrading} size="sm">
+          Grade Now
+        </Button>
       </div>
 
       {/* Summary */}

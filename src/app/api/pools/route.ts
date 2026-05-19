@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     round_frequency, push_rule, all_lose_rule, prize_structure,
   } = body;
 
-  if (!name || !sport || !start_date || !pick_deadline) {
+  if (!name || !sport || !start_date) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 

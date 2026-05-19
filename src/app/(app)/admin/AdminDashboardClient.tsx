@@ -21,6 +21,7 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
   const [picks, setPicks] = useState(initialPicks);
   const [gradingId, setGradingId] = useState<string | null>(null);
   const [autoGrading, setAutoGrading] = useState(false);
+  const [pickSearch, setPickSearch] = useState('');
 
   const runAutoGrade = async () => {
     setAutoGrading(true);
@@ -180,10 +181,16 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
       {/* Grade Picks Tab */}
       {activeTab === 'Grade Picks' && (
         <div className="space-y-3">
-          {picks.length === 0 ? (
+          <input
+            placeholder="Search by team, player, or pool..."
+            value={pickSearch}
+            onChange={e => setPickSearch(e.target.value)}
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          {picks.filter((p: any) => !pickSearch || JSON.stringify(p).toLowerCase().includes(pickSearch.toLowerCase())).length === 0 ? (
             <Card><CardBody className="text-center py-8 text-gray-500">No picks found.</CardBody></Card>
           ) : (
-            picks.map((pick: any) => (
+            picks.filter((p: any) => !pickSearch || JSON.stringify(p).toLowerCase().includes(pickSearch.toLowerCase())).map((pick: any) => (
               <Card key={pick.id}>
                 <CardBody>
                   <div className="flex items-start justify-between gap-3 flex-wrap">

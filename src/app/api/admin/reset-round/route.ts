@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Reset target round to open and its picks to pending
+  // Reset target round to open — keep picks as-is (already graded won/lost)
+  // The grader will find this overdue open round and reapply participant updates correctly
   await supabase.from('rounds').update({ status: 'open' }).eq('id', targetRound.id);
-  await supabase.from('picks').update({ status: 'pending', graded_at: null, is_locked: false }).eq('round_id', targetRound.id);
 
   return NextResponse.json({ success: true, round: targetRound.round_number });
 }

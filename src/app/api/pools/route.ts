@@ -41,6 +41,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
+  // Default pick_deadline to 9:30 PM ET on the start date if not provided
+  const resolvedPickDeadline = pick_deadline ?? (() => {
+    const d = new Date(start_date);
+    d.setUTCHours(1, 30, 0, 0); // 9:30 PM EDT = 01:30 UTC next day
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString();
+  })();
+
   const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const { data: pool, error } = await supabase.from('pools').insert({
@@ -57,7 +65,7 @@ export async function POST(request: NextRequest) {
     entry_fee_cents: entry_fee_cents ?? 0,
     rake_percentage: rake_percentage ?? 10,
     start_date,
-    pick_deadline,
+    pick_deadline: resolvedPickDeadline,
     round_frequency: round_frequency ?? 'weekly',
     push_rule: push_rule ?? 'advance',
     all_lose_rule: all_lose_rule ?? 'repeat',

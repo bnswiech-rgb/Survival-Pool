@@ -337,16 +337,7 @@ export async function GET(request: NextRequest) {
   const advancedRounds: string[] = [];
 
   for (const roundId of gradedRoundIds) {
-    // Skip if any picks in this round are still pending
-    const { data: stillPending } = await supabase
-      .from('picks')
-      .select('id')
-      .eq('round_id', roundId)
-      .eq('status', 'pending');
-
-    if (stillPending && stillPending.length > 0) continue;
-
-    // Load round + pool
+    // Load round + pool first so we can check the deadline
     const { data: round } = await supabase
       .from('rounds')
       .select('*, pools(*)')
@@ -356,6 +347,25 @@ export async function GET(request: NextRequest) {
     if (!round || round.status === 'completed') continue;
 
     const pool = round.pools as any;
+    const roundDeadlinePassed = new Date(round.deadline) < new Date();
+
+    // Skip if any picks are still pending AND the deadline hasn't passed yet
+    const { data: stillPending } = await supabase
+      .from('picks')
+      .select('id')
+      .eq('round_id', roundId)
+      .eq('status', 'pending');
+
+    if (stillPending && stillPending.length > 0 && !roundDeadlinePassed) continue;
+
+    // After deadline, force any remaining pending picks to 'lost' (missed pick = loss)
+    if (stillPending && stillPending.length > 0 && roundDeadlinePassed) {
+      await supabase
+        .from('picks')
+        .update({ status: 'lost' })
+        .eq('round_id', roundId)
+        .eq('status', 'pending');
+    }
 
     // Get all graded picks for this round
     const { data: picks } = await supabase

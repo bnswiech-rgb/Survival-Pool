@@ -378,8 +378,14 @@ export async function GET(request: NextRequest) {
 
     if (!participants?.length) continue;
 
+    // Key picksMap by pool_participants.id (not user_id) to match contest-engine lookup
+    const userToParticipantId = new Map<string, string>();
+    for (const p of participants) userToParticipantId.set((p as any).user_id, p.id);
     const picksMap = new Map<string, PickStatus>();
-    for (const pick of picks ?? []) picksMap.set(pick.user_id, pick.status as PickStatus);
+    for (const pick of picks ?? []) {
+      const participantId = userToParticipantId.get(pick.user_id);
+      if (participantId) picksMap.set(participantId, pick.status as PickStatus);
+    }
 
     const { updates, startTiebreaker } = processRoundResults(
       participants as any,

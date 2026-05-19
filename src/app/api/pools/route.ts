@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { sendNewPoolEmail } from '@/lib/email';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -91,6 +92,35 @@ export async function POST(request: NextRequest) {
     target_id: pool.id,
     metadata: { pool_name: name },
   });
+
+  // Email all users about the new pool
+  try {
+    const { data: allUsers } = await supabase
+      .from('profiles')
+      .select('id')
+      .neq('id', user.id); // don't email the creator
+
+    if (allUsers?.length) {
+      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const userIds = new Set(allUsers.map((u: any) => u.id));
+      const emails = (authUsers?.users ?? [])
+        .filter((u: any) => userIds.has(u.id) && u.email)
+        .map((u: any) => u.email as string);
+
+      await sendNewPoolEmail({
+        id: pool.id,
+        name: pool.name,
+        contest_format: pool.contest_format,
+        sport: pool.sport,
+        target_streak: pool.target_streak,
+        target_wins: pool.target_wins,
+        prize_description: body.prize_description,
+        entry_fee_cents: pool.entry_fee_cents,
+      }, emails);
+    }
+  } catch (e) {
+    console.error('Failed to send new pool emails:', e);
+  }
 
   return NextResponse.json({ pool }, { status: 201 });
 }

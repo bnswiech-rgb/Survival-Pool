@@ -207,6 +207,11 @@ export function PoolDetailClient({
             Join Contest {pool.entry_fee_cents > 0 ? `• ${formatCents(pool.entry_fee_cents)}` : '• Free'}
           </Button>
         )}
+        {!myParticipation && pool.contest_format !== 'streak_race' && (pool.status === 'active' || pool.status === 'completed') && (
+          <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-400">
+            🔒 This pool has already started — new entries are closed
+          </div>
+        )}
       </div>
 
       {/* My Status Banner */}

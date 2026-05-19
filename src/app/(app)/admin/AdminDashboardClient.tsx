@@ -60,8 +60,7 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     });
     const data = await res.json();
     if (!res.ok) { toast.error(data.error || 'Reset failed'); return; }
-    toast.success('Round reset — running grader...');
-    await runAutoGrade();
+    toast.success(`Round reset: ${data.eliminated ?? 0} eliminated, ${data.advanced ?? 0} advanced`);
   };
 
   const poolAction = async (poolId: string, action: string) => {

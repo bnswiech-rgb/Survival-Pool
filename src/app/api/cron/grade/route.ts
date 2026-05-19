@@ -29,7 +29,7 @@ interface OddsScore {
 }
 
 function normalize(s: string): string {
-  return s.toLowerCase().trim();
+  return s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 // Match pick.game ("Away @ Home") against API home_team / away_team

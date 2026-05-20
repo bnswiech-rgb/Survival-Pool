@@ -1,6 +1,12 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+export function formatPickLabel(pick: { pick_type: string; side: string; line_value: string | null }): string {
+  if (pick.pick_type === 'total') return pick.line_value ?? pick.side;
+  if (pick.pick_type === 'moneyline') return `${pick.side} ML`;
+  return `${pick.side} ${pick.line_value ?? ''}`.trim();
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

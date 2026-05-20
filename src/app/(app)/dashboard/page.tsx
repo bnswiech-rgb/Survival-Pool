@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Trophy, TrendingUp, Target, Award } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { formatCents, getContestFormatLabel } from '@/lib/utils';
+import { formatCents, getContestFormatLabel, formatPickLabel } from '@/lib/utils';
 import { ActivityFeed } from '@/components/activity/ActivityFeed';
 
 export default async function DashboardPage() {
@@ -155,8 +155,7 @@ export default async function DashboardPage() {
                           </div>
                           {pick ? (
                             <div className="mt-1 flex items-center gap-2">
-                              <span className="text-sm font-semibold text-white">{pick.side}</span>
-                              <span className="text-sm text-gray-400">{pick.line_value}</span>
+                              <span className="text-sm font-semibold text-white">{formatPickLabel(pick)}</span>
                               <span className="text-xs text-gray-500 uppercase">{pick.pick_type}</span>
                               <span className="ml-auto text-xs font-bold text-green-400">✓ Locked In</span>
                             </div>

@@ -4,7 +4,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { formatDistanceToNow } from 'date-fns';
-import { getContestFormatLabel, getStatusBadgeColor } from '@/lib/utils';
+import { getContestFormatLabel, getStatusBadgeColor, formatPickLabel } from '@/lib/utils';
 import Link from 'next/link';
 import { FollowButton } from './FollowButton';
 
@@ -176,7 +176,7 @@ export default async function ProfilePage({ params }: Props) {
               {recentPicks.map((pick: any) => (
                 <div key={pick.id} className="flex items-center justify-between">
                   <div className="flex-1">
-                    <div className="text-sm text-white font-medium">{pick.side} ({pick.line_value})</div>
+                    <div className="text-sm text-white font-medium">{formatPickLabel(pick)}</div>
                     <div className="text-xs text-gray-400">
                       {pick.game} · {pick.pools?.name} Round {pick.rounds?.round_number}
                     </div>

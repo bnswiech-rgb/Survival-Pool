@@ -27,22 +27,26 @@ const SPORT_KEYS: Record<string, string[]> = {
 // All supported sport keys combined
 const ALL_KEYS = Object.values(SPORT_KEYS).flat();
 
-function getEligibleRange(): { start: Date; end: Date } {
+function getEligibleRange(deadline?: string): { start: Date; end: Date } {
   const now = new Date();
-
-  // Get current date in ET (UTC-4 during EDT)
-  const etOffset = -4 * 60; // EDT in minutes
+  const etOffset = -4 * 60;
   const etNow = new Date(now.getTime() + etOffset * 60000);
 
-  // End of today in ET = midnight ET = 4:00 AM UTC next day
-  const endET = new Date(Date.UTC(
-    etNow.getUTCFullYear(),
-    etNow.getUTCMonth(),
-    etNow.getUTCDate() + 1,
-    4, 0, 0, 0  // midnight ET = 4 AM UTC
+  const endOfTodayET = new Date(Date.UTC(
+    etNow.getUTCFullYear(), etNow.getUTCMonth(), etNow.getUTCDate() + 1, 4, 0, 0, 0
   ));
 
-  return { start: now, end: endET };
+  if (deadline) {
+    const dl = new Date(deadline);
+    const dlET = new Date(dl.getTime() + etOffset * 60000);
+    if (dlET.getUTCDate() > etNow.getUTCDate() || dlET.getUTCMonth() > etNow.getUTCMonth()) {
+      const startOfDlDay = new Date(Date.UTC(dlET.getUTCFullYear(), dlET.getUTCMonth(), dlET.getUTCDate(), 4, 0, 0, 0));
+      const endOfDlDay = new Date(Date.UTC(dlET.getUTCFullYear(), dlET.getUTCMonth(), dlET.getUTCDate() + 1, 4, 0, 0, 0));
+      return { start: startOfDlDay, end: endOfDlDay };
+    }
+  }
+
+  return { start: now, end: endOfTodayET };
 }
 
 export async function GET(request: NextRequest) {
@@ -54,7 +58,8 @@ export async function GET(request: NextRequest) {
   }
 
   const keysToFetch = sport === 'All' ? ALL_KEYS : (SPORT_KEYS[sport] ?? ALL_KEYS);
-  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange();
+  const deadline = searchParams.get('deadline') ?? undefined;
+  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(deadline);
 
   const allGames: any[] = [];
 

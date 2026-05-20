@@ -40,24 +40,7 @@ export async function POST(request: NextRequest) {
     .eq('user_id', pick.user_id)
     .maybeSingle();
 
-  if (participant) {
-    if (status === 'won') {
-      await supabase.from('pool_participants').update({
-        wins: participant.wins + 1,
-      }).eq('id', participant.id);
-      // Profile wins updated via separate fetch to avoid type error
-      const { data: prof } = await supabase.from('profiles').select('wins').eq('id', pick.user_id).single();
-      if (prof) await supabase.from('profiles').update({ wins: prof.wins + 1 }).eq('id', pick.user_id);
-    } else if (status === 'lost') {
-      await supabase.from('pool_participants').update({
-        losses: participant.losses + 1,
-      }).eq('id', participant.id);
-    } else if (status === 'push') {
-      await supabase.from('pool_participants').update({
-        pushes: participant.pushes + 1,
-      }).eq('id', participant.id);
-    }
-  }
+  // Do not update participant stats here — the cron/advance handles that correctly
 
   // Log admin action
   await supabase.from('admin_actions').insert({

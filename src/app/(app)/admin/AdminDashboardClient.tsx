@@ -53,6 +53,18 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     setGradingId(null);
   };
 
+  const regradeRound = async (poolId: string) => {
+    const res = await fetch('/api/admin/regrade-round', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pool_id: poolId }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error || 'Regrade failed'); return; }
+    toast.success(`Round ${data.round} reset for regrading — running grader...`);
+    await runAutoGrade();
+  };
+
   const resetRound = async (poolId: string) => {
     const res = await fetch('/api/admin/reset-round', {
       method: 'POST',
@@ -162,6 +174,9 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => advanceRound(pool.id)}>
                         Advance Round
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => regradeRound(pool.id)}>
+                        Regrade Round
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => resetRound(pool.id)}>
                         Reset Round

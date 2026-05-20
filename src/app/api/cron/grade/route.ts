@@ -193,8 +193,16 @@ export async function GET(request: NextRequest) {
     );
     if (!game?.scores || game.scores.length < 2) continue; // game not finished yet
 
-    const homeScoreObj = game.scores.find((s: any) => normalize(s.name) === normalize(game.home_team));
-    const awayScoreObj = game.scores.find((s: any) => normalize(s.name) === normalize(game.away_team));
+    const homeScoreObj = game.scores.find((s: any) => {
+      const sn = normalize(s.name);
+      const ht = normalize(game.home_team);
+      return sn === ht || ht.includes(sn) || sn.includes(ht) || sn.split(' ').pop() === ht.split(' ').pop();
+    });
+    const awayScoreObj = game.scores.find((s: any) => {
+      const sn = normalize(s.name);
+      const at = normalize(game.away_team);
+      return sn === at || at.includes(sn) || sn.includes(at) || sn.split(' ').pop() === at.split(' ').pop();
+    });
     if (!homeScoreObj || !awayScoreObj) continue;
 
     const result = gradePick(

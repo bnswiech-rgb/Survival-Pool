@@ -635,9 +635,7 @@ export function PoolDetailClient({
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-xs text-gray-400 mb-0.5">Your Pick</p>
-                            <p className="text-white font-bold text-sm">
-                              {histMyPick.pick_type === 'total' ? histMyPick.line_value : `${histMyPick.side} ${histMyPick.line_value}`}
-                            </p>
+                            <p className="text-white font-bold text-sm">{pickLabel(histMyPick)}</p>
                             <p className="text-xs text-gray-500 truncate">{histMyPick.game}</p>
                           </div>
                           <Badge variant={
@@ -671,7 +669,7 @@ export function PoolDetailClient({
                                   {pick.profiles?.username ?? 'Unknown'}
                                 </span>
                                 <span className="text-xs text-gray-500 truncate">
-                                  {pick.pick_type === 'total' ? pick.line_value : `${pick.side} ${pick.line_value}`}
+                                  {pickLabel(pick)}
                                 </span>
                               </div>
                               <Badge variant={

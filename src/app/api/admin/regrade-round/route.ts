@@ -30,12 +30,11 @@ export async function POST(request: NextRequest) {
   if (!round) return NextResponse.json({ error: 'No completed round found' }, { status: 400 });
 
   // Reset all picks in that round to pending so cron regrads them
-  const { count } = await supabase
+  await supabase
     .from('picks')
     .update({ status: 'pending', graded_at: null, is_locked: false })
     .eq('round_id', round.id)
-    .neq('status', 'pending')
-    .select('*', { count: 'exact', head: true } as any);
+    .neq('status', 'pending');
 
   // Reset round to open so the advance logic re-runs after grading
   await supabase.from('rounds').update({ status: 'open' }).eq('id', round.id);
@@ -46,5 +45,5 @@ export async function POST(request: NextRequest) {
     .update({ wins: 0, losses: 0, current_streak: 0, status: 'active', eliminated_round: null })
     .eq('pool_id', pool_id);
 
-  return NextResponse.json({ success: true, round: round.round_number, picksReset: count ?? 0 });
+  return NextResponse.json({ success: true, round: round.round_number });
 }

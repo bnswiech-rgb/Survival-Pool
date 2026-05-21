@@ -130,14 +130,20 @@ export default async function DashboardPage() {
                           <div className="text-sm text-gray-400">{pool.sport}</div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <div className="text-sm font-semibold text-green-400">
-                            {p.status === 'advanced' ? '✅ Advanced' : '✅ Alive'}
-                          </div>
+                          {pool.contest_format === 'streak_race' ? (
+                            (() => {
+                              const s = p.current_streak ?? 0;
+                              const label = s > 0 ? `🔥 ${s}W streak` : s < 0 ? `${Math.abs(s)}L streak` : '0W streak';
+                              const color = s > 0 ? 'text-orange-400' : s < 0 ? 'text-red-400' : 'text-gray-400';
+                              return <div className={`text-sm font-semibold ${color}`}>{label}</div>;
+                            })()
+                          ) : (
+                            <div className="text-sm font-semibold text-green-400">
+                              {p.status === 'advanced' ? '✅ Advanced' : '✅ Alive'}
+                            </div>
+                          )}
                           {pool.contest_format === 'lives' && (
                             <div className="text-xs text-yellow-400">{p.lives_remaining} lives left</div>
-                          )}
-                          {pool.contest_format === 'streak_race' && p.current_streak > 0 && (
-                            <div className="text-xs text-orange-400">🔥 {p.current_streak} streak</div>
                           )}
                         </div>
                       </div>

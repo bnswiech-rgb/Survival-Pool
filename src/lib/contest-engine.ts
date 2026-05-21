@@ -207,7 +207,9 @@ export function processRoundResults(
 ): { updates: Map<string, ParticipantUpdate>; startTiebreaker: boolean } {
   const updates = new Map<string, ParticipantUpdate>();
   for (const participant of participants) {
-    const pickStatus = picks.get(participant.id) || 'lost';
+    const rawPickStatus = picks.get(participant.id);
+    // Streak race: no pick = push (streak preserved). All other formats: no pick = loss.
+    const pickStatus: PickStatus = rawPickStatus ?? (pool.contest_format === 'streak_race' ? 'push' : 'lost');
     let update: ParticipantUpdate;
     switch (pool.contest_format) {
       case 'classic':

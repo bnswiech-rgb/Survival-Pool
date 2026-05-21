@@ -3,13 +3,13 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { processRoundResults } from '@/lib/contest-engine';
 import type { PickStatus } from '@/types';
 
-// Only these sports have structured score data from The Odds API
-const GRADEABLE_SPORT_KEYS = [
-  'basketball_nba',
-  'basketball_wnba',
-  'baseball_mlb',
-  'icehockey_nhl',
-];
+// ESPN sport/league mapping for team sports grading
+const ESPN_SPORT_MAP: Record<string, { sport: string; league: string }> = {
+  'basketball_nba':  { sport: 'basketball', league: 'nba'  },
+  'basketball_wnba': { sport: 'basketball', league: 'wnba' },
+  'baseball_mlb':    { sport: 'baseball',   league: 'mlb'  },
+  'icehockey_nhl':   { sport: 'hockey',     league: 'nhl'  },
+};
 
 const DEADLINE_SPORT_KEYS = [
   'basketball_nba', 'basketball_wnba', 'baseball_mlb',
@@ -18,14 +18,11 @@ const DEADLINE_SPORT_KEYS = [
   'tennis_atp_us_open', 'tennis_wta_us_open',
 ];
 
-interface OddsScore {
-  id: string;
-  sport_key: string;
-  commence_time: string;
-  completed: boolean;
-  home_team: string;
-  away_team: string;
-  scores: Array<{ name: string; score: string }> | null;
+function toESPNDate(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
 }
 
 function normalize(s: string): string {
@@ -54,7 +51,7 @@ function gradePick(
   side: string,
   lineValue: string,
   homeTeam: string,
-  awayTeam: string,
+  _awayTeam: string,
   homeScore: number,
   awayScore: number,
 ): 'won' | 'lost' | 'push' {
@@ -143,7 +140,7 @@ async function getNextRoundDeadline(frequency: string): Promise<Date> {
   return fallback;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
 
   const supabase = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -160,69 +157,91 @@ export async function GET(request: NextRequest) {
 
   if (picksError) return NextResponse.json({ error: picksError.message }, { status: 500 });
 
-  // Fetch scores from The Odds API for each sport with pending picks
-  const sportKeys = [
-    ...new Set(
-      pendingPicks
-        .map((p: any) => p.league as string)
-        .filter((k: string) => GRADEABLE_SPORT_KEYS.includes(k)),
-    ),
-  ];
-
-  const scoresMap: Record<string, OddsScore[]> = {};
-  for (const sportKey of sportKeys) {
-    try {
-      const res = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${sportKey}/scores?apiKey=${process.env.ODDS_API_KEY}&daysFrom=3&dateFormat=iso`,
-        { cache: 'no-store' },
-      );
-      if (res.ok) scoresMap[sportKey] = await res.json();
-    } catch { /* skip, try next */ }
-  }
-
   let gradedCount = 0;
   const gradedRoundIds = new Set<string>();
 
-  // Grade each pending pick
-  for (const pick of (pendingPicks ?? []) as any[]) {
-    const scores = scoresMap[pick.league];
-    if (!scores) continue; // tennis or sport without score data — skip for now
+  // --- Team sports grading via ESPN (NBA, WNBA, MLB, NHL) ---
+  const teamSportPicks = (pendingPicks as any[]).filter((p: any) => p.league in ESPN_SPORT_MAP);
 
-    const game = scores.find(
-      (g: OddsScore) => g.completed && g.scores && teamsMatch(pick.game, g.home_team, g.away_team),
-    );
-    if (!game?.scores || game.scores.length < 2) continue; // game not finished yet
+  if (teamSportPicks.length > 0) {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(today.getUTCDate() - 1);
+    // Check yesterday + today to cover games that ended late
+    const datesToCheck = [toESPNDate(yesterday), toESPNDate(today)];
 
-    const homeScoreObj = game.scores.find((s: any) => {
-      const sn = normalize(s.name);
-      const ht = normalize(game.home_team);
-      return sn === ht || ht.includes(sn) || sn.includes(ht) || sn.split(' ').pop() === ht.split(' ').pop();
-    });
-    const awayScoreObj = game.scores.find((s: any) => {
-      const sn = normalize(s.name);
-      const at = normalize(game.away_team);
-      return sn === at || at.includes(sn) || sn.includes(at) || sn.split(' ').pop() === at.split(' ').pop();
-    });
-    if (!homeScoreObj || !awayScoreObj) continue;
+    const espnTeamCache: Record<string, any[]> = {};
 
-    const result = gradePick(
-      pick.pick_type,
-      pick.side,
-      pick.line_value,
-      game.home_team,
-      game.away_team,
-      parseInt(homeScoreObj.score),
-      parseInt(awayScoreObj.score),
-    );
+    const fetchESPNTeam = async (sportKey: string, dateStr: string): Promise<any[]> => {
+      const cacheKey = `${sportKey}_${dateStr}`;
+      if (espnTeamCache[cacheKey]) return espnTeamCache[cacheKey];
+      const mapping = ESPN_SPORT_MAP[sportKey];
+      if (!mapping) { espnTeamCache[cacheKey] = []; return []; }
+      try {
+        const res = await fetch(
+          `https://site.api.espn.com/apis/site/v2/sports/${mapping.sport}/${mapping.league}/scoreboard?dates=${dateStr}`,
+          { cache: 'no-store' },
+        );
+        if (!res.ok) { espnTeamCache[cacheKey] = []; return []; }
+        const json = await res.json();
+        espnTeamCache[cacheKey] = Array.isArray(json?.events) ? json.events : [];
+        return espnTeamCache[cacheKey];
+      } catch {
+        espnTeamCache[cacheKey] = [];
+        return [];
+      }
+    };
 
-    const { error } = await supabase
-      .from('picks')
-      .update({ status: result, graded_at: new Date().toISOString(), is_locked: true })
-      .eq('id', pick.id);
+    for (const pick of teamSportPicks) {
+      let matchedData: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number } | null = null;
 
-    if (!error) {
-      gradedCount++;
-      gradedRoundIds.add(pick.round_id);
+      for (const dateStr of datesToCheck) {
+        const events = await fetchESPNTeam(pick.league, dateStr);
+        for (const event of events) {
+          const competition = event.competitions?.[0];
+          if (!competition) continue;
+          if (!competition.status?.type?.completed) continue;
+          const competitors: any[] = competition.competitors ?? [];
+          if (competitors.length < 2) continue;
+
+          const homeComp = competitors.find((c: any) => c.homeAway === 'home') ?? competitors[0];
+          const awayComp = competitors.find((c: any) => c.homeAway === 'away') ?? competitors[1];
+          const homeTeam: string = homeComp?.team?.displayName ?? homeComp?.team?.name ?? '';
+          const awayTeam: string = awayComp?.team?.displayName ?? awayComp?.team?.name ?? '';
+
+          if (!teamsMatch(pick.game, homeTeam, awayTeam)) continue;
+
+          const homeScore = parseInt(homeComp?.score ?? '0');
+          const awayScore = parseInt(awayComp?.score ?? '0');
+          if (isNaN(homeScore) || isNaN(awayScore)) continue;
+
+          matchedData = { homeTeam, awayTeam, homeScore, awayScore };
+          break;
+        }
+        if (matchedData) break;
+      }
+
+      if (!matchedData) continue;
+
+      const result = gradePick(
+        pick.pick_type,
+        pick.side,
+        pick.line_value,
+        matchedData.homeTeam,
+        matchedData.awayTeam,
+        matchedData.homeScore,
+        matchedData.awayScore,
+      );
+
+      const { error } = await supabase
+        .from('picks')
+        .update({ status: result, graded_at: new Date().toISOString(), is_locked: true })
+        .eq('id', pick.id);
+
+      if (!error) {
+        gradedCount++;
+        gradedRoundIds.add(pick.round_id);
+      }
     }
   }
 
@@ -237,14 +256,6 @@ export async function GET(request: NextRequest) {
       if (leagueKey.includes('_wta')) return 'wta';
       if (leagueKey.includes('_atp')) return 'atp';
       return null;
-    }
-
-    // Build date strings for today and yesterday
-    function toESPNDate(d: Date): string {
-      const y = d.getUTCFullYear();
-      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d.getUTCDate()).padStart(2, '0');
-      return `${y}${m}${day}`;
     }
 
     const today = new Date();

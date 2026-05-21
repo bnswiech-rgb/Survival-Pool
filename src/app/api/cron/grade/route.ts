@@ -456,20 +456,27 @@ export async function GET(_request: NextRequest) {
 
       await supabase.from('pool_participants').update(dbUpdate).eq('id', participantId);
 
-      if (update.status === 'eliminated') {
+      const activityType = update.status === 'eliminated' ? 'eliminated'
+        : update.status === 'winner' ? 'won_contest'
+        : 'survived_round';
+      const activityMeta = activityType === 'won_contest'
+        ? { pool_name: pool.name }
+        : { round: round.round_number };
+
+      // Only insert if this exact activity doesn't already exist (prevents duplicates on re-runs)
+      const { data: existing } = await supabase
+        .from('activity_feed')
+        .select('id')
+        .eq('pool_id', round.pool_id)
+        .eq('user_id', participant.user_id)
+        .eq('activity_type', activityType)
+        .eq('metadata', activityMeta)
+        .maybeSingle();
+
+      if (!existing) {
         await supabase.from('activity_feed').insert({
           pool_id: round.pool_id, user_id: participant.user_id,
-          activity_type: 'eliminated', metadata: { round: round.round_number },
-        });
-      } else if (update.status === 'winner') {
-        await supabase.from('activity_feed').insert({
-          pool_id: round.pool_id, user_id: participant.user_id,
-          activity_type: 'won_contest', metadata: { pool_name: pool.name },
-        });
-      } else {
-        await supabase.from('activity_feed').insert({
-          pool_id: round.pool_id, user_id: participant.user_id,
-          activity_type: 'survived_round', metadata: { round: round.round_number },
+          activity_type: activityType, metadata: activityMeta,
         });
       }
     }

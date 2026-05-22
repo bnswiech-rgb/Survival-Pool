@@ -42,7 +42,8 @@ export default function CreatePoolPage() {
   const [maxLosses, setMaxLosses] = useState('');
   const [pushResetsStreak, setPushResetsStreak] = useState(false);
 
-  // Step 3: Entry & Prize — locked free during beta
+  // Step 3: Entry & Prize
+  const [entryFeeCoins, setEntryFeeCoins] = useState('0');
   const rakePercentage = '10';
 
   // Step 4: Schedule
@@ -71,6 +72,7 @@ export default function CreatePoolPage() {
         max_losses: maxLosses ? parseInt(maxLosses) : null,
         push_resets_streak: pushResetsStreak,
         entry_fee_cents: 0,
+        entry_fee_coins: parseInt(entryFeeCoins) || 0,
         rake_percentage: parseFloat(rakePercentage),
         start_date: new Date(`${startDate}T00:00:00`).toISOString(),
         round_frequency: roundFrequency,
@@ -204,10 +206,40 @@ export default function CreatePoolPage() {
         <Card>
           <CardHeader><h3 className="font-bold text-white">Entry Fee & Prize</h3></CardHeader>
           <CardBody className="space-y-4">
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-center">
-              <div className="text-2xl mb-2">🎉</div>
-              <div className="font-bold text-white mb-1">Free During Beta</div>
-              <div className="text-sm text-gray-400">All contests are free to enter during the testing phase. Paid entry fees will be available in a future update.</div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Gold Coin Entry Fee</label>
+              <div className="flex gap-2 flex-wrap">
+                {[0, 100, 250, 500, 1000].map(amount => (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() => setEntryFeeCoins(String(amount))}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      entryFeeCoins === String(amount)
+                        ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
+                        : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                    }`}
+                  >
+                    {amount === 0 ? 'Free' : `${amount.toLocaleString()} GC`}
+                  </button>
+                ))}
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Custom…"
+                  value={[0,100,250,500,1000].includes(parseInt(entryFeeCoins)) ? '' : entryFeeCoins}
+                  onChange={e => setEntryFeeCoins(e.target.value)}
+                  className="w-28 px-3 py-2 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:outline-none focus:border-yellow-500"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                {parseInt(entryFeeCoins) > 0
+                  ? `Players need ${parseInt(entryFeeCoins).toLocaleString()} Gold Coins to enter. Winners receive Sweeps Coins.`
+                  : 'Free to enter — no coins required.'}
+              </p>
+            </div>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-xs text-blue-300">
+              Gold Coins have no cash value. Sweeps Coins are the redeemable prize currency per sweepstakes rules.
             </div>
           </CardBody>
         </Card>
@@ -288,7 +320,7 @@ export default function CreatePoolPage() {
                 { label: 'Sport', value: sport },
                 { label: 'Format', value: getContestFormatLabel(contestFormat) },
                 { label: 'Visibility', value: visibility },
-                { label: 'Entry Fee', value: 'Free' },
+                { label: 'Entry Fee', value: parseInt(entryFeeCoins) > 0 ? `${parseInt(entryFeeCoins).toLocaleString()} GC` : 'Free' },
                 { label: 'Start Date', value: startDate ? new Date(`${startDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
                 { label: 'Frequency', value: roundFrequency },
                 { label: 'Push Rule', value: pushRule },

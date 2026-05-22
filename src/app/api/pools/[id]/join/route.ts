@@ -36,7 +36,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .maybeSingle();
   if (existing) return NextResponse.json({ error: 'Already joined this contest' }, { status: 400 });
 
-  // Mock payment if entry fee > 0
+  // Coin entry fee: deduct gold coins if required
+  if ((pool.entry_fee_coins ?? 0) > 0) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('gold_coins')
+      .eq('id', user.id)
+      .single();
+    if (!profile || profile.gold_coins < pool.entry_fee_coins) {
+      return NextResponse.json({ error: 'Not enough Gold Coins to enter this contest' }, { status: 400 });
+    }
+    await supabase
+      .from('profiles')
+      .update({ gold_coins: profile.gold_coins - pool.entry_fee_coins })
+      .eq('id', user.id);
+    await supabase.from('coin_transactions').insert({
+      user_id: user.id,
+      gold_delta: -pool.entry_fee_coins,
+      sweeps_delta: 0,
+      transaction_type: 'pool_entry',
+      pool_id: id,
+      note: `Entered: ${pool.name}`,
+    });
+  }
+
+  // Cash entry fee (mock payment)
   if (pool.entry_fee_cents > 0) {
     const platformFee = Math.round(pool.entry_fee_cents * (pool.rake_percentage / 100));
     await supabase.from('payments').insert({

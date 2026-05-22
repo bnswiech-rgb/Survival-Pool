@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Trophy, ChevronDown, Shield, LogOut, User } from 'lucide-react';
+import { Menu, X, Trophy, ChevronDown, Shield, LogOut, User, Coins } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Avatar } from '@/components/ui/Avatar';
 import type { Profile } from '@/types';
@@ -52,6 +52,18 @@ export function Navbar({ profile }: NavbarProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            {profile && (
+              <Link
+                href="/coins"
+                className="hidden sm:flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Coins size={14} />
+                <span>{(profile.gold_coins ?? 0).toLocaleString()} GC</span>
+                {(profile.sweeps_coins ?? 0) > 0 && (
+                  <span className="text-green-400 ml-1">{(profile.sweeps_coins ?? 0).toLocaleString()} SC</span>
+                )}
+              </Link>
+            )}
             {profile ? (
               <div className="relative">
                 <button

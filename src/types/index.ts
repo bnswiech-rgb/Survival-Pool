@@ -20,7 +20,39 @@ export interface Profile {
   pushes: number;
   pools_entered: number;
   pools_won: number;
+  gold_coins: number;
+  sweeps_coins: number;
+  lifetime_gold_purchased: number;
   created_at: string;
+}
+
+export type CoinTransactionType =
+  | 'purchase'
+  | 'pool_entry'
+  | 'pool_win'
+  | 'daily_bonus'
+  | 'admin_grant'
+  | 'refund';
+
+export interface CoinTransaction {
+  id: string;
+  user_id: string;
+  gold_delta: number;
+  sweeps_delta: number;
+  transaction_type: CoinTransactionType;
+  pool_id: string | null;
+  stripe_payment_intent_id: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface CoinPack {
+  id: string;
+  label: string;
+  price_cents: number;
+  gold_coins: number;
+  sweeps_coins: number;
+  popular?: boolean;
 }
 
 export interface Pool {
@@ -28,6 +60,7 @@ export interface Pool {
   name: string;
   sport: string;
   entry_fee_cents: number;
+  entry_fee_coins: number;
   rake_percentage: number;
   max_entries: number | null;
   start_date: string;

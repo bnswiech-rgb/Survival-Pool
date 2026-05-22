@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     name, sport, visibility, max_entries, contest_format, lives_count, target_wins, target_streak,
-    max_losses, push_resets_streak, entry_fee_cents, rake_percentage, start_date, pick_deadline,
+    max_losses, push_resets_streak, entry_fee_cents, entry_fee_coins, rake_percentage, start_date, pick_deadline,
     round_frequency, push_rule, all_lose_rule, prize_structure,
   } = body;
 
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
     max_losses: max_losses ?? null,
     push_resets_streak: push_resets_streak ?? false,
     entry_fee_cents: entry_fee_cents ?? 0,
+    entry_fee_coins: entry_fee_coins ?? 0,
     rake_percentage: rake_percentage ?? 10,
     start_date,
     pick_deadline: resolvedPickDeadline,

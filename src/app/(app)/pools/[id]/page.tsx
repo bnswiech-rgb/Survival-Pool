@@ -35,6 +35,18 @@ export default async function PoolDetailPage({ params }: Props) {
       .maybeSingle(),
   ]);
 
+  // Fetch all graded picks from the current open round so the leaderboard
+  // can show live-projected stats before the round officially closes
+  let currentRoundGradedPicks: any[] = [];
+  if (currentRound) {
+    const { data: gradedPicks } = await supabase
+      .from('picks')
+      .select('user_id, status')
+      .eq('round_id', currentRound.id)
+      .neq('status', 'pending');
+    currentRoundGradedPicks = gradedPicks ?? [];
+  }
+
   if (!pool) notFound();
 
   let myParticipation = null;
@@ -85,6 +97,7 @@ export default async function PoolDetailPage({ params }: Props) {
       myParticipation={myParticipation}
       currentUser={currentUser}
       initialPicks={picks}
+      currentRoundGradedPicks={currentRoundGradedPicks}
     />
   );
 }

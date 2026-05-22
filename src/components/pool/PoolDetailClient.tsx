@@ -22,6 +22,7 @@ interface Props {
   myParticipation: PoolParticipant | null;
   currentUser: Profile | null;
   initialPicks: Pick[];
+  currentRoundGradedPicks?: { user_id: string; status: string }[];
 }
 
 const TABS = ['Overview', 'Picks', 'Survivors', 'History', 'Chat'];
@@ -35,6 +36,7 @@ export function PoolDetailClient({
   myParticipation: initMy,
   currentUser,
   initialPicks,
+  currentRoundGradedPicks = [],
 }: Props) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [participants, setParticipants] = useState(initialParticipants);
@@ -56,8 +58,26 @@ export function PoolDetailClient({
   const aliveCount = participants.filter(p => p.status === 'active' || p.status === 'advanced').length;
   const eliminatedCount = participants.filter(p => p.status === 'eliminated').length;
   const isStreakRace = pool.contest_format === 'streak_race';
-  const leaderStreak = isStreakRace ? participants.reduce((max, p) => Math.max(max, (p as any).current_streak ?? 0), 0) : 0;
-  const leadersCount = leaderStreak > 0 ? participants.filter(p => (p as any).current_streak === leaderStreak).length : 0;
+  // Project live streak/wins/losses from current round's already-graded picks,
+  // so standings reflect reality before the round officially closes at 4 AM.
+  const livePickByUser = Object.fromEntries(currentRoundGradedPicks.map(p => [p.user_id, p.status]));
+  function projectStreak(p: PoolParticipant): number {
+    const stored = (p as any).current_streak ?? 0;
+    const pickStatus = livePickByUser[p.user_id];
+    if (!pickStatus) return stored;
+    if (pickStatus === 'won') return stored < 0 ? 1 : stored + 1;
+    if (pickStatus === 'lost') return stored > 0 ? -1 : stored - 1;
+    return stored; // push
+  }
+  function projectWins(p: PoolParticipant): number {
+    return livePickByUser[p.user_id] === 'won' ? p.wins + 1 : p.wins;
+  }
+  function projectLosses(p: PoolParticipant): number {
+    return livePickByUser[p.user_id] === 'lost' ? p.losses + 1 : p.losses;
+  }
+
+  const leaderStreak = isStreakRace ? participants.reduce((max, p) => Math.max(max, projectStreak(p)), 0) : 0;
+  const leadersCount = leaderStreak > 0 ? participants.filter(p => projectStreak(p) === leaderStreak).length : 0;
 
   // Realtime subscriptions
   useEffect(() => {
@@ -522,10 +542,8 @@ export function PoolDetailClient({
                 if (b.status === 'winner' && a.status !== 'winner') return 1;
                 if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
                 if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
-                if (isStreakRace) {
-                  return ((b as any).current_streak ?? 0) - ((a as any).current_streak ?? 0);
-                }
-                return b.wins - a.wins;
+                if (isStreakRace) return projectStreak(b) - projectStreak(a);
+                return projectWins(b) - projectWins(a);
               })
               .map((p: any, idx) => {
                 const isElim = p.status === 'eliminated';
@@ -545,7 +563,7 @@ export function PoolDetailClient({
                             </span>
                             {isStreakRace ? (
                               (() => {
-                                const s = (p as any).current_streak ?? 0;
+                                const s = projectStreak(p);
                                 return s > 0
                                   ? <span className="text-xs font-bold text-green-400">{s}W</span>
                                   : s < 0
@@ -553,7 +571,7 @@ export function PoolDetailClient({
                                   : <span className="text-xs text-gray-500">0W</span>;
                               })()
                             ) : (
-                              <span className="text-xs text-gray-500">W{p.wins}-L{p.losses}-P{p.pushes}</span>
+                              <span className="text-xs text-gray-500">W{projectWins(p)}-L{projectLosses(p)}-P{p.pushes}</span>
                             )}
                           </div>
                           {pick ? (

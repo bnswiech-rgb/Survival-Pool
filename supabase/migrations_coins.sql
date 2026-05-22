@@ -7,7 +7,8 @@
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS gold_coins integer DEFAULT 0 NOT NULL,
   ADD COLUMN IF NOT EXISTS sweeps_coins integer DEFAULT 0 NOT NULL,
-  ADD COLUMN IF NOT EXISTS lifetime_gold_purchased integer DEFAULT 0 NOT NULL;
+  ADD COLUMN IF NOT EXISTS lifetime_gold_purchased integer DEFAULT 0 NOT NULL,
+  ADD COLUMN IF NOT EXISTS last_daily_bonus_at timestamptz DEFAULT NULL;
 
 -- 2. Add coin entry fee to pools (separate from cash entry_fee_cents)
 ALTER TABLE pools

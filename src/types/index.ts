@@ -23,6 +23,7 @@ export interface Profile {
   gold_coins: number;
   sweeps_coins: number;
   lifetime_gold_purchased: number;
+  last_daily_bonus_at: string | null;
   created_at: string;
 }
 

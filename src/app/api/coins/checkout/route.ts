@@ -10,14 +10,31 @@ const COIN_PACKS: Record<string, CoinPack> = {
   elite:   { id: 'elite',   label: 'Elite',     price_cents: 4999, gold_coins: 6500, sweeps_coins: 65 },
 };
 
+// Custom amount: 100 GC = $1.00, 1 SC per 100 GC (no bulk discount)
+function buildCustomPack(goldCoins: number): CoinPack {
+  const price_cents = Math.round((goldCoins / 100) * 100); // $1 per 100 GC
+  const sweeps_coins = Math.floor(goldCoins / 100);
+  return { id: 'custom', label: 'Custom', price_cents, gold_coins: goldCoins, sweeps_coins };
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { pack_id } = await request.json();
-  const pack = COIN_PACKS[pack_id];
-  if (!pack) return NextResponse.json({ error: 'Invalid pack' }, { status: 400 });
+  const { pack_id, custom_gold } = await request.json();
+
+  let pack: CoinPack;
+  if (pack_id === 'custom') {
+    const gold = parseInt(custom_gold);
+    if (!gold || gold < 100 || gold > 100000) {
+      return NextResponse.json({ error: 'Custom amount must be between 100 and 100,000 GC' }, { status: 400 });
+    }
+    pack = buildCustomPack(gold);
+  } else {
+    pack = COIN_PACKS[pack_id];
+    if (!pack) return NextResponse.json({ error: 'Invalid pack' }, { status: 400 });
+  }
 
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeKey || stripeKey === 'sk_test_placeholder') {

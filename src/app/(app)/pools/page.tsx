@@ -1,7 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { PoolCard } from '@/components/pool/PoolCard';
 import { Search } from 'lucide-react';
 import type { Pool } from '@/types';
+
+export const dynamic = 'force-dynamic';
 
 const SPORTS = ['All', 'NFL', 'NBA', 'MLB', 'NHL', 'CFB', 'CBB', 'Soccer', 'UFC', 'Other'];
 const FORMATS = ['All', 'classic', 'lives', 'first_to_x', 'best_record', 'streak_race', 'team_battle'];
@@ -31,12 +34,50 @@ export default async function PoolsPage({ searchParams }: Props) {
 
   const { data: pools } = await query.limit(50);
 
+  // Fetch current open rounds and graded picks for streak projection
+  const poolIds = pools?.map((p: any) => p.id) ?? [];
+  let gradedPicksByPool: Record<string, Record<string, string>> = {};
+  if (poolIds.length > 0) {
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    const { data: openRounds } = await serviceClient
+      .from('rounds')
+      .select('id, pool_id')
+      .in('pool_id', poolIds)
+      .eq('status', 'open');
+    if (openRounds && openRounds.length > 0) {
+      const roundIds = openRounds.map((r: any) => r.id);
+      const roundToPool = Object.fromEntries(openRounds.map((r: any) => [r.id, r.pool_id]));
+      const { data: gradedPicks } = await serviceClient
+        .from('picks')
+        .select('user_id, round_id, status')
+        .in('round_id', roundIds)
+        .neq('status', 'pending');
+      for (const pick of gradedPicks ?? []) {
+        const pid = roundToPool[pick.round_id];
+        if (!gradedPicksByPool[pid]) gradedPicksByPool[pid] = {};
+        gradedPicksByPool[pid][pick.user_id] = pick.status;
+      }
+    }
+  }
+
   const enrichedPools = pools?.map((p: any) => {
     const participants = p.pool_participants ?? [];
     const participant_count = participants.length;
     const alive_count = participants.filter((pp: any) => pp.status === 'active' || pp.status === 'advanced').length;
-    const leader_streak = participants.reduce((max: number, pp: any) => Math.max(max, pp.current_streak ?? 0), 0);
-    const leaders_count = leader_streak > 0 ? participants.filter((pp: any) => (pp.current_streak ?? 0) === leader_streak).length : 0;
+    const pickByUser = gradedPicksByPool[p.id] ?? {};
+    const projectedStreak = (pp: any) => {
+      const stored = pp.current_streak ?? 0;
+      const pickStatus = pickByUser[pp.user_id];
+      if (!pickStatus) return stored;
+      if (pickStatus === 'won') return stored < 0 ? 1 : stored + 1;
+      if (pickStatus === 'lost') return stored > 0 ? -1 : stored - 1;
+      return stored;
+    };
+    const leader_streak = participants.reduce((max: number, pp: any) => Math.max(max, projectedStreak(pp)), 0);
+    const leaders_count = leader_streak > 0 ? participants.filter((pp: any) => projectedStreak(pp) === leader_streak).length : 0;
     return { ...p, participant_count, alive_count, leader_streak, leaders_count };
   }) ?? [];
 

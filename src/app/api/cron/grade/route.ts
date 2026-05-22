@@ -167,8 +167,10 @@ export async function GET(_request: NextRequest) {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setUTCDate(today.getUTCDate() - 1);
-    // Check yesterday + today to cover games that ended late
-    const datesToCheck = [toESPNDate(yesterday), toESPNDate(today)];
+    const twoDaysAgo = new Date(today);
+    twoDaysAgo.setUTCDate(today.getUTCDate() - 2);
+    // Check 2 days ago + yesterday + today to cover games from multi-day rounds
+    const datesToCheck = [toESPNDate(twoDaysAgo), toESPNDate(yesterday), toESPNDate(today)];
 
     const espnTeamCache: Record<string, any[]> = {};
 
@@ -261,7 +263,9 @@ export async function GET(_request: NextRequest) {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setUTCDate(today.getUTCDate() - 1);
-    const datesToFetch = [toESPNDate(yesterday), toESPNDate(today)];
+    const twoDaysAgo2 = new Date(today);
+    twoDaysAgo2.setUTCDate(today.getUTCDate() - 2);
+    const datesToFetch = [toESPNDate(twoDaysAgo2), toESPNDate(yesterday), toESPNDate(today)];
 
     // Cache ESPN events per league+date
     const espnEventsCache: Record<string, any[]> = {};
@@ -373,19 +377,25 @@ export async function GET(_request: NextRequest) {
     // Skip if any picks are still pending AND the deadline hasn't passed yet
     const { data: stillPending } = await supabase
       .from('picks')
-      .select('id')
+      .select('id, game_start_time')
       .eq('round_id', roundId)
       .eq('status', 'pending');
 
     if (stillPending && stillPending.length > 0 && !roundDeadlinePassed) continue;
 
-    // After deadline, force any remaining pending picks to 'lost' (missed pick = loss)
+    // After deadline, force pending picks only if the game started 6+ hours ago
+    // (prevents killing picks for late-night games still in progress when deadline passes)
     if (stillPending && stillPending.length > 0 && roundDeadlinePassed) {
-      await supabase
-        .from('picks')
-        .update({ status: 'lost' })
-        .eq('round_id', roundId)
-        .eq('status', 'pending');
+      const gameOverCutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+      const forceIds = (stillPending as any[])
+        .filter((p: any) => !p.game_start_time || p.game_start_time < gameOverCutoff)
+        .map((p: any) => p.id);
+      if (forceIds.length > 0) {
+        await supabase
+          .from('picks')
+          .update({ status: pool.contest_format === 'streak_race' ? 'push' : 'lost' })
+          .in('id', forceIds);
+      }
     }
 
     // Get all graded picks for this round

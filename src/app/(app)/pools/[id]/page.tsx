@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import { PoolDetailClient } from '@/components/pool/PoolDetailClient';
 
@@ -35,11 +36,15 @@ export default async function PoolDetailPage({ params }: Props) {
       .maybeSingle(),
   ]);
 
-  // Fetch all graded picks from the current open round so the leaderboard
-  // can show live-projected stats before the round officially closes
+  // Fetch all graded picks from the current open round using service role
+  // (bypasses RLS so we can see everyone's picks for the live leaderboard projection)
   let currentRoundGradedPicks: any[] = [];
   if (currentRound) {
-    const { data: gradedPicks } = await supabase
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    const { data: gradedPicks } = await serviceClient
       .from('picks')
       .select('user_id, status')
       .eq('round_id', currentRound.id)

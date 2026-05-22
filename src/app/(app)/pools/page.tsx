@@ -23,7 +23,7 @@ export default async function PoolsPage({ searchParams }: Props) {
 
   let query = supabase
     .from('pools')
-    .select('*, pool_participants(current_streak, status, profiles(username))')
+    .select('*, pool_participants(user_id, current_streak, status, profiles(username))')
     .eq('visibility', 'public')
     .order('created_at', { ascending: false });
 

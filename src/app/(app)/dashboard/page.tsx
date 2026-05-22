@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 import { Trophy, TrendingUp, Target, Award } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';

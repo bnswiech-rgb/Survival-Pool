@@ -132,7 +132,14 @@ export default async function DashboardPage() {
                         <div className="text-right flex-shrink-0">
                           {pool.contest_format === 'streak_race' ? (
                             (() => {
-                              const s = p.current_streak ?? 0;
+                              const stored = p.current_streak ?? 0;
+                              const currentPick = pickByPool[pool.id];
+                              const pickInCurrentRound = currentPick && round && currentPick.round_id === round.id;
+                              let s = stored;
+                              if (pickInCurrentRound && currentPick.status !== 'pending') {
+                                if (currentPick.status === 'won') s = stored < 0 ? 1 : stored + 1;
+                                else if (currentPick.status === 'lost') s = stored > 0 ? -1 : stored - 1;
+                              }
                               const label = s > 0 ? `🔥 ${s}W streak` : s < 0 ? `${Math.abs(s)}L streak` : '0W streak';
                               const color = s > 0 ? 'text-orange-400' : s < 0 ? 'text-red-400' : 'text-gray-400';
                               return <div className={`text-sm font-semibold ${color}`}>{label}</div>;

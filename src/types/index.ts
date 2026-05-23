@@ -82,6 +82,7 @@ export interface Pool {
   push_resets_streak: boolean;
   tiebreaker_active: boolean;
   team_scoring: string | null;
+  team_size: number | null;
   created_by: string;
   created_at: string;
   updated_at: string;

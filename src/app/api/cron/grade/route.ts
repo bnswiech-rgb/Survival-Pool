@@ -444,10 +444,38 @@ export async function GET(_request: NextRequest) {
     // Key picksMap by pool_participants.id (not user_id) to match contest-engine lookup
     const userToParticipantId = new Map<string, string>();
     for (const p of participants) userToParticipantId.set((p as any).user_id, p.id);
-    const picksMap = new Map<string, PickStatus>();
-    for (const pick of picks ?? []) {
-      const participantId = userToParticipantId.get(pick.user_id);
-      if (participantId) picksMap.set(participantId, pick.status as PickStatus);
+
+    let picksMap = new Map<string, PickStatus>();
+
+    if (pool.contest_format === 'team_battle') {
+      // Team parlay: all members of a team must win for the team to advance.
+      // If any member loses, everyone on the team gets a loss.
+      // Group participants by team_id
+      const teamGroups = new Map<string, any[]>();
+      for (const p of participants) {
+        const tid = (p as any).team_id ?? 'none';
+        if (!teamGroups.has(tid)) teamGroups.set(tid, []);
+        teamGroups.get(tid)!.push(p);
+      }
+      const pickByUser = new Map<string, PickStatus>();
+      for (const pick of picks ?? []) pickByUser.set(pick.user_id, pick.status as PickStatus);
+
+      for (const [, members] of teamGroups) {
+        const statuses = members.map((m: any) => pickByUser.get(m.user_id) ?? 'push');
+        // Parlay: any loss = team loss; all wins = team win; otherwise push
+        const teamResult: PickStatus = statuses.some(s => s === 'lost') ? 'lost'
+          : statuses.every(s => s === 'won') ? 'won'
+          : 'push';
+        for (const m of members) {
+          const participantId = userToParticipantId.get(m.user_id);
+          if (participantId) picksMap.set(participantId, teamResult);
+        }
+      }
+    } else {
+      for (const pick of picks ?? []) {
+        const participantId = userToParticipantId.get(pick.user_id);
+        if (participantId) picksMap.set(participantId, pick.status as PickStatus);
+      }
     }
 
     console.log(`[advance] picksMap size: ${picksMap.size}, sample:`, JSON.stringify([...picksMap.entries()].slice(0,3)));

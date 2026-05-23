@@ -50,6 +50,9 @@ export default function CreatePoolPage() {
   const [startDate, setStartDate] = useState('');
   const roundFrequency = 'daily';
 
+  // Team Battle
+  const [teamSize, setTeamSize] = useState('2');
+
   // Step 5: Rules
   const [pushRule, setPushRule] = useState<'advance' | 'eliminate' | 'repeat'>('advance');
   const [allLoseRule, setAllLoseRule] = useState<'repeat' | 'split' | 'tiebreak'>('repeat');
@@ -71,6 +74,7 @@ export default function CreatePoolPage() {
         target_streak: parseInt(targetStreak),
         max_losses: maxLosses ? parseInt(maxLosses) : null,
         push_resets_streak: pushResetsStreak,
+        team_size: contestFormat === 'team_battle' ? parseInt(teamSize) || 2 : null,
         entry_fee_cents: 0,
         entry_fee_coins: parseInt(entryFeeCoins) || 0,
         rake_percentage: parseFloat(rakePercentage),
@@ -196,6 +200,19 @@ export default function CreatePoolPage() {
             )}
             {contestFormat === 'best_record' && (
               <Input label="Contest Duration (rounds)" type="number" value={targetWins} onChange={e => setTargetWins(e.target.value)} min="1" hint="How many rounds before determining the winner" />
+            )}
+            {contestFormat === 'team_battle' && (
+              <div className="space-y-3">
+                <Input
+                  label="Players Per Team"
+                  type="number"
+                  value={teamSize}
+                  onChange={e => setTeamSize(e.target.value)}
+                  min="2"
+                  max="10"
+                  hint="All players on a team must win their pick for the team to advance (parlay). Any loss eliminates the team."
+                />
+              </div>
             )}
           </CardBody>
         </Card>
@@ -326,6 +343,7 @@ export default function CreatePoolPage() {
                 { label: 'Push Rule', value: pushRule },
                 { label: 'All-Lose Rule', value: allLoseRule },
                 { label: 'Max Entries', value: maxEntries || 'Unlimited' },
+                ...(contestFormat === 'team_battle' ? [{ label: 'Players Per Team', value: teamSize }] : []),
               ].map(item => (
                 <div key={item.label} className="bg-gray-800 rounded-lg px-3 py-2">
                   <div className="text-xs text-gray-500">{item.label}</div>

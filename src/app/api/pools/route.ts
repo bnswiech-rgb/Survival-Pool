@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   const {
     name, sport, visibility, max_entries, contest_format, lives_count, target_wins, target_streak,
     max_losses, push_resets_streak, entry_fee_cents, entry_fee_coins, rake_percentage, start_date, pick_deadline,
-    round_frequency, push_rule, all_lose_rule, prize_structure,
+    round_frequency, push_rule, all_lose_rule, prize_structure, team_size,
   } = body;
 
   if (!name || !sport || !start_date) {
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     push_rule: push_rule ?? 'advance',
     all_lose_rule: all_lose_rule ?? 'repeat',
     prize_structure: prize_structure ?? 'winner_take_all',
+    team_size: team_size ?? null,
     status: 'open',
     created_by: user.id,
     invite_code: inviteCode,

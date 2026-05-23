@@ -107,7 +107,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         .eq('round_id', round_id)
         .eq('game', game)
         .eq('side', side)
-        .eq('pick_type', pick_type)
         .in('user_id', teammateIds)
         .maybeSingle();
 

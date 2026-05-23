@@ -27,25 +27,12 @@ const SPORT_KEYS: Record<string, string[]> = {
 // All supported sport keys combined
 const ALL_KEYS = Object.values(SPORT_KEYS).flat();
 
-function getEligibleRange(deadline?: string): { start: Date; end: Date } {
+function getEligibleRange(): { start: Date; end: Date } {
   const now = new Date();
-  const etOffset = -4 * 60;
-  const etNow = new Date(now.getTime() + etOffset * 60000);
-
-  // Always start from now so games already started are excluded
-  const start = now;
-
-  if (deadline) {
-    const dl = new Date(deadline);
-    const dlET = new Date(dl.getTime() + etOffset * 60000);
-    // End = midnight ET at end of the deadline's calendar day
-    const end = new Date(Date.UTC(dlET.getUTCFullYear(), dlET.getUTCMonth(), dlET.getUTCDate() + 1, 4, 0, 0, 0));
-    return { start, end };
-  }
-
-  // No deadline: show through end of today ET
-  const end = new Date(Date.UTC(etNow.getUTCFullYear(), etNow.getUTCMonth(), etNow.getUTCDate() + 1, 4, 0, 0, 0));
-  return { start, end };
+  // Show games from now through 3 days out.
+  // The round deadline controls when picks lock — it does not restrict which games are visible.
+  const end = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  return { start: now, end };
 }
 
 export async function GET(request: NextRequest) {
@@ -57,8 +44,7 @@ export async function GET(request: NextRequest) {
   }
 
   const keysToFetch = sport === 'All' ? ALL_KEYS : (SPORT_KEYS[sport] ?? ALL_KEYS);
-  const deadline = searchParams.get('deadline') ?? undefined;
-  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(deadline);
+  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange();
 
   const allGames: any[] = [];
 

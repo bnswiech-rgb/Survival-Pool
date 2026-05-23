@@ -18,17 +18,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const body = await request.json().catch(() => ({}));
 
-  // Find the current open/grading round for this pool
+  // Find the latest round for this pool (any status)
   const { data: round } = await supabase
     .from('rounds')
     .select('id, round_number, deadline')
     .eq('pool_id', id)
-    .in('status', ['open', 'locked', 'grading'])
     .order('round_number', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!round) return NextResponse.json({ error: 'No active round found' }, { status: 404 });
+  if (!round) return NextResponse.json({ error: 'No round found for this pool' }, { status: 404 });
 
   // Use provided deadline or default to tonight at 9:30 PM ET (1:30 AM UTC next day)
   let newDeadline: string;

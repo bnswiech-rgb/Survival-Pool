@@ -103,14 +103,20 @@ export async function POST(_request: NextRequest) {
     if (count === 0) roundsToAdvance.push(r.id);
   }
 
-  // Also add overdue rounds
+  // Also add overdue rounds — but only if they have no pending picks
   const { data: overdueRounds } = await supabase
     .from('rounds')
     .select('id')
     .neq('status', 'completed')
     .lt('deadline', new Date().toISOString());
   for (const r of overdueRounds ?? []) {
-    if (!roundsToAdvance.includes(r.id)) roundsToAdvance.push(r.id);
+    if (roundsToAdvance.includes(r.id)) continue;
+    const { count } = await supabase
+      .from('picks')
+      .select('id', { count: 'exact', head: true })
+      .eq('round_id', r.id)
+      .eq('status', 'pending');
+    if (count === 0) roundsToAdvance.push(r.id);
   }
 
   const advancedRounds: string[] = [];

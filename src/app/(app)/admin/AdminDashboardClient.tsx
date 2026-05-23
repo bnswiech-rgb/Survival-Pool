@@ -95,6 +95,14 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     else toast.success('Round advanced!');
   };
 
+  const forceComplete = async (poolId: string, poolName: string) => {
+    if (!confirm(`Force complete "${poolName}"? This will crown the leader as winner and close the pool.`)) return;
+    const res = await fetch(`/api/admin/pools/${poolId}/force-complete`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) toast.error(data.error || 'Failed to force complete');
+    else toast.success('Pool completed and winner crowned!');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -181,6 +189,9 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => resetRound(pool.id)}>
                         Reset Round
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => forceComplete(pool.id, pool.name)}>
+                        Force Complete
                       </Button>
                       <Button size="sm" variant="danger" onClick={() => poolAction(pool.id, 'cancel')}>
                         Cancel

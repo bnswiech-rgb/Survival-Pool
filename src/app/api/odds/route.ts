@@ -27,11 +27,18 @@ const SPORT_KEYS: Record<string, string[]> = {
 // All supported sport keys combined
 const ALL_KEYS = Object.values(SPORT_KEYS).flat();
 
-function getEligibleRange(): { start: Date; end: Date } {
+function getEligibleRange(startDate?: string): { start: Date; end: Date } {
   const now = new Date();
-  // Show games from now through 3 days out.
-  // The round deadline controls when picks lock — it does not restrict which games are visible.
   const end = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+  // If pool has a start_date, don't show games before that date (ET midnight)
+  if (startDate) {
+    const parts = startDate.split('-').map(Number); // [yyyy, mm, dd]
+    // start_date midnight ET = 4:00 AM UTC that day
+    const poolStart = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 4, 0, 0, 0));
+    return { start: poolStart > now ? poolStart : now, end };
+  }
+
   return { start: now, end };
 }
 
@@ -44,7 +51,8 @@ export async function GET(request: NextRequest) {
   }
 
   const keysToFetch = sport === 'All' ? ALL_KEYS : (SPORT_KEYS[sport] ?? ALL_KEYS);
-  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange();
+  const startDate = searchParams.get('start') ?? undefined;
+  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(startDate);
 
   const allGames: any[] = [];
 

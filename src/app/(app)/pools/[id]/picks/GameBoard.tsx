@@ -58,7 +58,8 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
     setLoading(true);
     try {
       const deadlineParam = round.deadline ? `&deadline=${encodeURIComponent(round.deadline)}` : '';
-      const res = await fetch(`/api/odds?sport=${encodeURIComponent(sportFilter)}${deadlineParam}`);
+      const startParam = pool.start_date ? `&start=${encodeURIComponent(pool.start_date)}` : '';
+      const res = await fetch(`/api/odds?sport=${encodeURIComponent(sportFilter)}${deadlineParam}${startParam}`);
       const data = await res.json();
       if (data.error) {
         toast.error(data.error);

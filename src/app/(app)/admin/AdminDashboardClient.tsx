@@ -26,10 +26,10 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
   const runAutoGrade = async () => {
     setAutoGrading(true);
     try {
-      const res = await fetch('/api/cron/grade');
+      const res = await fetch('/api/admin/run-grader', { method: 'POST' });
       const data = await res.json();
-      if (data.error) toast.error(data.error);
-      else toast.success(`Graded ${data.graded ?? 0} picks, advanced ${data.advancedRounds ?? 0} rounds, found ${data.overdueRoundsFound ?? 0} overdue rounds`);
+      if (!res.ok || data.error) toast.error(data.error || 'Failed to run grader');
+      else toast.success(`Graded ${data.graded ?? 0} picks, advanced ${data.advancedRounds ?? 0} rounds`);
     } catch {
       toast.error('Failed to run grader');
     }

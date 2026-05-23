@@ -78,7 +78,9 @@ export default async function PoolsPage({ searchParams }: Props) {
     };
     const leader_streak = participants.reduce((max: number, pp: any) => Math.max(max, projectedStreak(pp)), 0);
     const leaders_count = leader_streak > 0 ? participants.filter((pp: any) => projectedStreak(pp) === leader_streak).length : 0;
-    return { ...p, participant_count, alive_count, leader_streak, leaders_count };
+    const winner = participants.find((pp: any) => pp.status === 'winner');
+    const winner_username = winner?.profiles?.username ?? null;
+    return { ...p, participant_count, alive_count, leader_streak, leaders_count, winner_username };
   }) ?? [];
 
   return (

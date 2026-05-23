@@ -106,7 +106,9 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
 
           {/* Status line */}
           <div className="flex items-center justify-between text-sm mt-auto">
-            {pool.contest_format === 'streak_race' ? (
+            {pool.status === 'completed' && (pool as any).winner_username ? (
+              <span className="text-yellow-400 font-bold">🏆 {(pool as any).winner_username} won</span>
+            ) : pool.contest_format === 'streak_race' ? (
               <span className="text-gray-400">
                 {(pool as any).leader_streak > 0
                   ? <><span className="text-white font-bold">{(pool as any).leaders_count}</span> {(pool as any).leaders_count === 1 ? 'person' : 'people'} at <span className="text-green-400 font-bold">{(pool as any).leader_streak}W</span></>

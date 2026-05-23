@@ -464,8 +464,10 @@ export function PoolDetailClient({
             <div>
               {!hasSubmittedPick && (
                 <div className="mb-4 flex items-center gap-2">
-                  <span className="text-yellow-400 font-bold text-sm">⚠ Pick not submitted yet</span>
-                  <CountdownTimer deadline={initialCurrentRound.deadline} className="text-sm" />
+                  <span className="text-yellow-400 font-bold text-sm">
+                    {isStreakRace ? '📋 No pick submitted — skipping this round counts as a push' : '⚠ Pick not submitted yet'}
+                  </span>
+                  {!isStreakRace && <CountdownTimer deadline={initialCurrentRound.deadline} className="text-sm" />}
                 </div>
               )}
               {hasSubmittedPick && (

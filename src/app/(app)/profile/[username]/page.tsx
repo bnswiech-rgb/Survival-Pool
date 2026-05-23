@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -24,6 +27,22 @@ export default async function ProfilePage({ params }: Props) {
     .single();
 
   if (!profile) notFound();
+
+  // Compute real stats from pool_participants (profiles.wins/losses are stale denormalized columns)
+  const serviceClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+  const { data: allParticipations } = await serviceClient
+    .from('pool_participants')
+    .select('wins, losses, pushes, status')
+    .eq('user_id', profile.id);
+
+  const realWins = (allParticipations ?? []).reduce((s: number, p: any) => s + (p.wins ?? 0), 0);
+  const realLosses = (allParticipations ?? []).reduce((s: number, p: any) => s + (p.losses ?? 0), 0);
+  const realPushes = (allParticipations ?? []).reduce((s: number, p: any) => s + (p.pushes ?? 0), 0);
+  const realPoolsEntered = (allParticipations ?? []).length;
+  const realPoolsWon = (allParticipations ?? []).filter((p: any) => p.status === 'winner').length;
 
   const [{ data: activeContests }, { data: recentPicks }, { data: isFollowing }] = await Promise.all([
     supabase
@@ -50,16 +69,16 @@ export default async function ProfilePage({ params }: Props) {
       : { data: null },
   ]);
 
-  const winRate = profile.wins + profile.losses > 0
-    ? Math.round((profile.wins / (profile.wins + profile.losses)) * 100)
+  const winRate = realWins + realLosses > 0
+    ? Math.round((realWins / (realWins + realLosses)) * 100)
     : 0;
 
   const isOwnProfile = currentAuthUser?.id === profile.id;
 
   const achievements = [];
-  if (profile.pools_won >= 1) achievements.push({ emoji: '🏆', label: 'Contest Winner' });
-  if (profile.wins >= 50) achievements.push({ emoji: '⚡', label: '50 Win Club' });
-  if (profile.pools_entered >= 10) achievements.push({ emoji: '🏈', label: 'Veteran' });
+  if (realPoolsWon >= 1) achievements.push({ emoji: '🏆', label: 'Contest Winner' });
+  if (realWins >= 50) achievements.push({ emoji: '⚡', label: '50 Win Club' });
+  if (realPoolsEntered >= 10) achievements.push({ emoji: '🏈', label: 'Veteran' });
   if (winRate >= 60) achievements.push({ emoji: '🎯', label: 'Sharp' });
 
   return (
@@ -79,15 +98,15 @@ export default async function ProfilePage({ params }: Props) {
               </p>
               <div className="flex items-center gap-4 mt-3">
                 <div className="text-center">
-                  <div className="text-xl font-black text-green-400">{profile.wins}</div>
+                  <div className="text-xl font-black text-green-400">{realWins}</div>
                   <div className="text-xs text-gray-500">Wins</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xl font-black text-red-400">{profile.losses}</div>
+                  <div className="text-xl font-black text-red-400">{realLosses}</div>
                   <div className="text-xs text-gray-500">Losses</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xl font-black text-blue-400">{profile.pushes}</div>
+                  <div className="text-xl font-black text-blue-400">{realPushes}</div>
                   <div className="text-xs text-gray-500">Pushes</div>
                 </div>
                 <div className="text-center">
@@ -111,13 +130,13 @@ export default async function ProfilePage({ params }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardBody className="text-center">
-            <div className="text-3xl font-black text-white">{profile.pools_entered}</div>
+            <div className="text-3xl font-black text-white">{realPoolsEntered}</div>
             <div className="text-gray-400 text-sm mt-1">Contests Entered</div>
           </CardBody>
         </Card>
         <Card>
           <CardBody className="text-center">
-            <div className="text-3xl font-black text-yellow-400">{profile.pools_won}</div>
+            <div className="text-3xl font-black text-yellow-400">{realPoolsWon}</div>
             <div className="text-gray-400 text-sm mt-1">Contests Won</div>
           </CardBody>
         </Card>

@@ -38,6 +38,21 @@ export default async function PoolDetailPage({ params }: Props) {
       .maybeSingle(),
   ]);
 
+  // For team_battle pools, fetch user_ids who have submitted any pick this round
+  // (just IDs — no pick details — so teammates can see who is locked in)
+  let submittedPickUserIds: string[] = [];
+  if (pool?.contest_format === 'team_battle' && currentRound) {
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    const { data: submitted } = await serviceClient
+      .from('picks')
+      .select('user_id')
+      .eq('round_id', currentRound.id);
+    submittedPickUserIds = (submitted ?? []).map((p: any) => p.user_id);
+  }
+
   // Fetch all graded picks from the current open round using service role
   // (bypasses RLS so we can see everyone's picks for the live leaderboard projection)
   let currentRoundGradedPicks: any[] = [];
@@ -128,6 +143,7 @@ export default async function PoolDetailPage({ params }: Props) {
       currentRoundGradedPicks={currentRoundGradedPicks}
       initialMyTeam={myTeam}
       initialAllTeams={allTeams}
+      submittedPickUserIds={submittedPickUserIds}
     />
   );
 }

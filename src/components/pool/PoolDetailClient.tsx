@@ -25,6 +25,7 @@ interface Props {
   currentRoundGradedPicks?: { user_id: string; status: string }[];
   initialMyTeam?: any;
   initialAllTeams?: any[];
+  submittedPickUserIds?: string[];
 }
 
 const TABS = ['Overview', 'Picks', 'Survivors', 'History', 'Chat'];
@@ -43,6 +44,7 @@ export function PoolDetailClient({
   currentRoundGradedPicks = [],
   initialMyTeam = null,
   initialAllTeams = [],
+  submittedPickUserIds = [],
 }: Props) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [participants, setParticipants] = useState(initialParticipants);
@@ -761,13 +763,14 @@ export function PoolDetailClient({
                           <div className="ml-9 space-y-1">
                             {members.map((m: any) => {
                               const pick = picksVisible ? pickByUser[m.user_id] : null;
+                              const hasLocked = submittedPickUserIds.includes(m.user_id);
                               return (
                                 <div key={m.id} className="flex items-center gap-2">
                                   <Avatar src={m.profiles?.avatar_url} username={m.profiles?.username ?? '?'} size="xs" />
                                   <span className={`text-sm ${isElim ? 'text-gray-500' : 'text-gray-300'}`}>
                                     {m.profiles?.username ?? 'Unknown'}
                                   </span>
-                                  {pick && (
+                                  {pick ? (
                                     <span className="text-xs text-gray-500 truncate">
                                       {pickLabel(pick)}
                                       {pick.status !== 'pending' && (
@@ -776,7 +779,11 @@ export function PoolDetailClient({
                                         </span>
                                       )}
                                     </span>
-                                  )}
+                                  ) : hasLocked ? (
+                                    <span className="text-xs text-green-400 font-medium">✓ locked in</span>
+                                  ) : initialCurrentRound ? (
+                                    <span className="text-xs text-gray-600">no pick yet</span>
+                                  ) : null}
                                 </div>
                               );
                             })}

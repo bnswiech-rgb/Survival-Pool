@@ -32,21 +32,20 @@ function getEligibleRange(deadline?: string): { start: Date; end: Date } {
   const etOffset = -4 * 60;
   const etNow = new Date(now.getTime() + etOffset * 60000);
 
-  const endOfTodayET = new Date(Date.UTC(
-    etNow.getUTCFullYear(), etNow.getUTCMonth(), etNow.getUTCDate() + 1, 4, 0, 0, 0
-  ));
+  // Always start from now so games already started are excluded
+  const start = now;
 
   if (deadline) {
     const dl = new Date(deadline);
     const dlET = new Date(dl.getTime() + etOffset * 60000);
-    if (dlET.getUTCDate() > etNow.getUTCDate() || dlET.getUTCMonth() > etNow.getUTCMonth()) {
-      const startOfDlDay = new Date(Date.UTC(dlET.getUTCFullYear(), dlET.getUTCMonth(), dlET.getUTCDate(), 4, 0, 0, 0));
-      const endOfDlDay = new Date(Date.UTC(dlET.getUTCFullYear(), dlET.getUTCMonth(), dlET.getUTCDate() + 1, 4, 0, 0, 0));
-      return { start: startOfDlDay, end: endOfDlDay };
-    }
+    // End = midnight ET at end of the deadline's calendar day
+    const end = new Date(Date.UTC(dlET.getUTCFullYear(), dlET.getUTCMonth(), dlET.getUTCDate() + 1, 4, 0, 0, 0));
+    return { start, end };
   }
 
-  return { start: now, end: endOfTodayET };
+  // No deadline: show through end of today ET
+  const end = new Date(Date.UTC(etNow.getUTCFullYear(), etNow.getUTCMonth(), etNow.getUTCDate() + 1, 4, 0, 0, 0));
+  return { start, end };
 }
 
 export async function GET(request: NextRequest) {
@@ -67,7 +66,7 @@ export async function GET(request: NextRequest) {
     try {
       const res = await fetch(
         `${BASE_URL}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=us&markets=spreads,totals,h2h&oddsFormat=american&dateFormat=iso`,
-        { next: { revalidate: 300 } }
+        { cache: 'no-store' }
       );
       if (!res.ok) continue;
       const data = await res.json();

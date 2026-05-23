@@ -149,16 +149,41 @@ export async function POST(_request: NextRequest) {
     const userToParticipantId = new Map<string, string>();
     for (const p of participants) userToParticipantId.set((p as any).user_id, p.id);
     const picksMap = new Map<string, PickStatus>();
-    for (const pick of picks ?? []) {
-      const participantId = userToParticipantId.get(pick.user_id);
-      if (participantId) picksMap.set(participantId, pick.status as PickStatus);
+
+    if (pool.contest_format === 'team_battle') {
+      // Aggregate picks by team: any loss = team lost, all won = team won, else push
+      const teamGroups = new Map<string, any[]>();
+      for (const p of participants) {
+        const tid = (p as any).team_id ?? 'none';
+        if (!teamGroups.has(tid)) teamGroups.set(tid, []);
+        teamGroups.get(tid)!.push(p);
+      }
+      const pickByUser = new Map<string, PickStatus>();
+      for (const pick of picks ?? []) pickByUser.set(pick.user_id, pick.status as PickStatus);
+      for (const [, members] of teamGroups) {
+        const statuses = members.map((m: any) => pickByUser.get(m.user_id) ?? 'push');
+        const teamResult: PickStatus = statuses.some(s => s === 'lost') ? 'lost'
+          : statuses.every(s => s === 'won') ? 'won' : 'push';
+        for (const m of members) {
+          const pid = userToParticipantId.get(m.user_id);
+          if (pid) picksMap.set(pid, teamResult);
+        }
+      }
+    } else {
+      for (const pick of picks ?? []) {
+        const participantId = userToParticipantId.get(pick.user_id);
+        if (participantId) picksMap.set(participantId, pick.status as PickStatus);
+      }
     }
+
+    const effectiveFormat = pool.contest_format === 'team_battle' && pool.team_scoring
+      ? pool.team_scoring : pool.contest_format;
 
     const { updates, startTiebreaker } = processRoundResults(
       participants as any,
       picksMap,
       {
-        contest_format: pool.contest_format,
+        contest_format: effectiveFormat,
         push_rule: pool.push_rule,
         all_lose_rule: pool.all_lose_rule,
         lives_count: pool.lives_count,

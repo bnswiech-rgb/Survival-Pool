@@ -31,10 +31,10 @@ function getEligibleRange(startDate?: string): { start: Date; end: Date } {
   const now = new Date();
   const end = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-  // If pool has a start_date, don't show games before that date (ET midnight)
+  // If pool has a start_date, don't show games before midnight ET on that date (4 AM UTC)
   if (startDate) {
-    const parts = startDate.split('-').map(Number); // [yyyy, mm, dd]
-    // start_date midnight ET = 4:00 AM UTC that day
+    const dateOnly = startDate.substring(0, 10); // always "YYYY-MM-DD"
+    const parts = dateOnly.split('-').map(Number);
     const poolStart = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 4, 0, 0, 0));
     return { start: poolStart > now ? poolStart : now, end };
   }

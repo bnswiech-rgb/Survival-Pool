@@ -19,7 +19,72 @@ export async function POST(_request: NextRequest) {
 
   try {
 
-  // Auto-grade any pending picks for completed games before advancing rounds
+  // Step 1: Reset any picks that were graded before their game started (bad grades)
+  const now = new Date().toISOString();
+  const { data: badGrades } = await supabase
+    .from('picks')
+    .select('id, pool_id')
+    .neq('status', 'pending')
+    .neq('status', 'void')
+    .gt('game_start_time', now);
+
+  if (badGrades?.length) {
+    const badIds = badGrades.map((p: any) => p.id);
+    await supabase
+      .from('picks')
+      .update({ status: 'pending', graded_at: null, is_locked: false })
+      .in('id', badIds);
+
+    // Rebuild stats for affected pools
+    const affectedPools = [...new Set(badGrades.map((p: any) => p.pool_id))];
+    for (const poolId of affectedPools) {
+      const { data: pool } = await supabase.from('pools').select('*').eq('id', poolId).single();
+      if (!pool) continue;
+      const { data: participants } = await supabase
+        .from('pool_participants').select('*').eq('pool_id', poolId);
+      if (!participants?.length) continue;
+      // Reset all participants
+      await supabase.from('pool_participants').update({
+        wins: 0, losses: 0, pushes: 0, current_streak: 0,
+        rounds_survived: 0, lives_remaining: pool.lives_count ?? 1,
+        status: 'active', eliminated_round: null,
+      }).eq('pool_id', poolId);
+      // Replay completed rounds
+      const { data: completedRounds } = await supabase
+        .from('rounds').select('*').eq('pool_id', poolId).eq('status', 'completed')
+        .order('round_number', { ascending: true });
+      for (const round of completedRounds ?? []) {
+        const { data: rParticipants } = await supabase
+          .from('pool_participants').select('*').eq('pool_id', poolId).in('status', ['active', 'advanced']);
+        if (!rParticipants?.length) break;
+        const { data: rPicks } = await supabase
+          .from('picks').select('*').eq('round_id', round.id).neq('status', 'pending');
+        const userToId = new Map<string, string>();
+        for (const p of rParticipants) userToId.set(p.user_id, p.id);
+        const picksMap = new Map<string, PickStatus>();
+        for (const pick of rPicks ?? []) {
+          const pid = userToId.get(pick.user_id);
+          if (pid) picksMap.set(pid, pick.status as PickStatus);
+        }
+        const effectiveFormat = pool.contest_format === 'team_battle' && pool.team_scoring
+          ? pool.team_scoring : pool.contest_format;
+        const { updates } = processRoundResults(rParticipants as any, picksMap, {
+          contest_format: effectiveFormat, push_rule: pool.push_rule,
+          all_lose_rule: pool.all_lose_rule, lives_count: pool.lives_count,
+          target_wins: pool.target_wins, target_streak: pool.target_streak,
+          max_losses: pool.max_losses, push_resets_streak: pool.push_resets_streak,
+          tiebreaker_active: pool.tiebreaker_active,
+        }, round.round_number);
+        for (const [participantId, update] of updates) {
+          const { isWinner, ...dbUpdate } = update;
+          if (isWinner) (dbUpdate as any).status = 'winner';
+          await supabase.from('pool_participants').update(dbUpdate).eq('id', participantId);
+        }
+      }
+    }
+  }
+
+  // Step 2: Auto-grade any pending picks for completed games before advancing rounds
   const picksGraded = await autoGradePendingPicks(supabase);
 
   // Find all open rounds with no pending picks — these need to be advanced

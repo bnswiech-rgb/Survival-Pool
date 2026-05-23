@@ -24,6 +24,7 @@ interface Props {
   initialPicks: Pick[];
   currentRoundGradedPicks?: { user_id: string; status: string }[];
   initialMyTeam?: any;
+  initialAllTeams?: any[];
 }
 
 const TABS = ['Overview', 'Picks', 'Survivors', 'History', 'Chat'];
@@ -39,6 +40,7 @@ export function PoolDetailClient({
   initialPicks,
   currentRoundGradedPicks = [],
   initialMyTeam = null,
+  initialAllTeams = [],
 }: Props) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [participants, setParticipants] = useState(initialParticipants);
@@ -697,70 +699,174 @@ export function PoolDetailClient({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-white">Survivors</h3>
-            <div className="text-sm text-gray-400">{participants.length} entries</div>
+            <div className="text-sm text-gray-400">
+              {pool.contest_format === 'team_battle'
+                ? `${initialAllTeams.length} team${initialAllTeams.length !== 1 ? 's' : ''}`
+                : `${participants.length} entries`}
+            </div>
           </div>
-          <div className="space-y-2">
-            {[...participants]
-              .sort((a, b) => {
-                if (a.status === 'winner' && b.status !== 'winner') return -1;
-                if (b.status === 'winner' && a.status !== 'winner') return 1;
-                if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
-                if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
-                if (isStreakRace) return projectStreak(b) - projectStreak(a);
-                return projectWins(b) - projectWins(a);
-              })
-              .map((p: any, idx) => {
-                const isElim = p.status === 'eliminated';
-                const pick = picksVisible ? pickByUser[p.user_id] : null;
+
+          {pool.contest_format === 'team_battle' ? (
+            // Team view: group participants by team
+            <div className="space-y-3">
+              {(() => {
+                const teamMap = new Map(initialAllTeams.map((t: any) => [t.id, t]));
+                const byTeam = new Map<string, any[]>();
+                const noTeam: any[] = [];
+                for (const p of participants) {
+                  const tid = (p as any).team_id;
+                  if (!tid) { noTeam.push(p); continue; }
+                  if (!byTeam.has(tid)) byTeam.set(tid, []);
+                  byTeam.get(tid)!.push(p);
+                }
+
+                const teamEntries = [...byTeam.entries()].map(([tid, members]) => {
+                  const team = teamMap.get(tid);
+                  // Team status: winner if any member is winner, eliminated if all eliminated, else active
+                  const isWinner = members.some((m: any) => m.status === 'winner');
+                  const isElim = members.every((m: any) => m.status === 'eliminated');
+                  const rep = members[0]; // use first member for record (all same in parlay)
+                  return { tid, team, members, isWinner, isElim, wins: rep?.wins ?? 0, losses: rep?.losses ?? 0, pushes: rep?.pushes ?? 0 };
+                }).sort((a, b) => {
+                  if (a.isWinner && !b.isWinner) return -1;
+                  if (b.isWinner && !a.isWinner) return 1;
+                  if (a.isElim && !b.isElim) return 1;
+                  if (b.isElim && !a.isElim) return -1;
+                  return b.wins - a.wins;
+                });
+
                 return (
-                  <Card key={p.id} className={isElim ? 'opacity-50' : p.status === 'winner' ? 'border-yellow-500/30' : ''}>
-                    <CardBody>
-                      <div className="flex items-center gap-3">
-                        <div className="text-gray-500 font-bold text-sm w-6 text-center flex-shrink-0">
-                          {p.status === 'winner' ? '🏆' : isElim ? '💀' : `#${idx + 1}`}
-                        </div>
-                        <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`font-bold text-sm ${isElim ? 'text-gray-500' : 'text-white'}`}>
-                              {p.profiles?.username ?? 'Unknown'}
-                            </span>
-                            {isStreakRace ? (
-                              (() => {
-                                const s = projectStreak(p);
-                                return s > 0
-                                  ? <span className="text-xs font-bold text-green-400">{s}W</span>
-                                  : s < 0
-                                  ? <span className="text-xs font-bold text-red-400">{Math.abs(s)}L</span>
-                                  : <span className="text-xs text-gray-500">0W</span>;
-                              })()
-                            ) : (
-                              <span className="text-xs text-gray-500">W{projectWins(p)}-L{projectLosses(p)}-P{p.pushes}</span>
-                            )}
-                          </div>
-                          {pick ? (
-                            <div className="text-xs mt-0.5">
-                              <span className="text-gray-400">{pick.game} · </span>
-                              <span className="text-white font-medium">{pickLabel(pick)}</span>
-                              {pick.status !== 'pending' && (
-                                <span className={`ml-1.5 font-bold ${pick.status === 'won' ? 'text-green-400' : pick.status === 'lost' ? 'text-red-400' : 'text-blue-400'}`}>
-                                  {pick.status.toUpperCase()}
+                  <>
+                    {teamEntries.map(({ tid, team, members, isWinner, isElim, wins, losses, pushes }, idx) => (
+                      <Card key={tid} className={isElim ? 'opacity-50' : isWinner ? 'border-yellow-500/30' : ''}>
+                        <CardBody>
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="text-gray-500 font-bold text-sm w-6 text-center flex-shrink-0">
+                              {isWinner ? '🏆' : isElim ? '💀' : `#${idx + 1}`}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`font-bold ${isElim ? 'text-gray-500' : 'text-white'}`}>
+                                  {team?.name ?? 'Unnamed Team'}
                                 </span>
+                                <span className="text-xs text-gray-500">W{wins}-L{losses}-P{pushes}</span>
+                              </div>
+                            </div>
+                            <Badge variant={isWinner ? 'yellow' : isElim ? 'red' : 'green'}>
+                              {isWinner ? 'Winner' : isElim ? 'Out' : 'Alive'}
+                            </Badge>
+                          </div>
+                          <div className="ml-9 space-y-1">
+                            {members.map((m: any) => {
+                              const pick = picksVisible ? pickByUser[m.user_id] : null;
+                              return (
+                                <div key={m.id} className="flex items-center gap-2">
+                                  <Avatar src={m.profiles?.avatar_url} username={m.profiles?.username ?? '?'} size="xs" />
+                                  <span className={`text-sm ${isElim ? 'text-gray-500' : 'text-gray-300'}`}>
+                                    {m.profiles?.username ?? 'Unknown'}
+                                  </span>
+                                  {pick && (
+                                    <span className="text-xs text-gray-500 truncate">
+                                      {pickLabel(pick)}
+                                      {pick.status !== 'pending' && (
+                                        <span className={`ml-1 font-bold ${pick.status === 'won' ? 'text-green-400' : pick.status === 'lost' ? 'text-red-400' : 'text-blue-400'}`}>
+                                          {pick.status.toUpperCase()}
+                                        </span>
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardBody>
+                      </Card>
+                    ))}
+                    {noTeam.length > 0 && (
+                      <Card className="opacity-50">
+                        <CardBody>
+                          <div className="text-xs text-gray-500 mb-2">No team yet</div>
+                          <div className="space-y-1">
+                            {noTeam.map((p: any) => (
+                              <div key={p.id} className="flex items-center gap-2">
+                                <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="xs" />
+                                <span className="text-sm text-gray-500">{p.profiles?.username ?? 'Unknown'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </CardBody>
+                      </Card>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          ) : (
+            // Solo view
+            <div className="space-y-2">
+              {[...participants]
+                .sort((a, b) => {
+                  if (a.status === 'winner' && b.status !== 'winner') return -1;
+                  if (b.status === 'winner' && a.status !== 'winner') return 1;
+                  if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
+                  if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
+                  if (isStreakRace) return projectStreak(b) - projectStreak(a);
+                  return projectWins(b) - projectWins(a);
+                })
+                .map((p: any, idx) => {
+                  const isElim = p.status === 'eliminated';
+                  const pick = picksVisible ? pickByUser[p.user_id] : null;
+                  return (
+                    <Card key={p.id} className={isElim ? 'opacity-50' : p.status === 'winner' ? 'border-yellow-500/30' : ''}>
+                      <CardBody>
+                        <div className="flex items-center gap-3">
+                          <div className="text-gray-500 font-bold text-sm w-6 text-center flex-shrink-0">
+                            {p.status === 'winner' ? '🏆' : isElim ? '💀' : `#${idx + 1}`}
+                          </div>
+                          <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`font-bold text-sm ${isElim ? 'text-gray-500' : 'text-white'}`}>
+                                {p.profiles?.username ?? 'Unknown'}
+                              </span>
+                              {isStreakRace ? (
+                                (() => {
+                                  const s = projectStreak(p);
+                                  return s > 0
+                                    ? <span className="text-xs font-bold text-green-400">{s}W</span>
+                                    : s < 0
+                                    ? <span className="text-xs font-bold text-red-400">{Math.abs(s)}L</span>
+                                    : <span className="text-xs text-gray-500">0W</span>;
+                                })()
+                              ) : (
+                                <span className="text-xs text-gray-500">W{projectWins(p)}-L{projectLosses(p)}-P{p.pushes}</span>
                               )}
                             </div>
-                          ) : picksVisible ? (
-                            <div className="text-xs text-gray-600 mt-0.5">No pick submitted</div>
-                          ) : null}
+                            {pick ? (
+                              <div className="text-xs mt-0.5">
+                                <span className="text-gray-400">{pick.game} · </span>
+                                <span className="text-white font-medium">{pickLabel(pick)}</span>
+                                {pick.status !== 'pending' && (
+                                  <span className={`ml-1.5 font-bold ${pick.status === 'won' ? 'text-green-400' : pick.status === 'lost' ? 'text-red-400' : 'text-blue-400'}`}>
+                                    {pick.status.toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                            ) : picksVisible ? (
+                              <div className="text-xs text-gray-600 mt-0.5">No pick submitted</div>
+                            ) : null}
+                          </div>
+                          <Badge variant={p.status === 'winner' ? 'yellow' : isElim ? 'red' : 'green'}>
+                            {p.status === 'winner' ? 'Winner' : isElim ? 'Out' : 'Alive'}
+                          </Badge>
                         </div>
-                        <Badge variant={p.status === 'winner' ? 'yellow' : isElim ? 'red' : 'green'}>
-                          {p.status === 'winner' ? 'Winner' : isElim ? 'Out' : 'Alive'}
-                        </Badge>
-                      </div>
-                    </CardBody>
-                  </Card>
-                );
-              })}
-          </div>
+                      </CardBody>
+                    </Card>
+                  );
+                })}
+            </div>
+          )}
+
           {!picksVisible && initialCurrentRound && (
             <p className="text-xs text-gray-600 text-center mt-2">Submit your pick to see what everyone else picked</p>
           )}

@@ -365,12 +365,12 @@ export async function GET(_request: NextRequest) {
     .select('id')
     .eq('status', 'open');
   for (const r of openRounds ?? []) {
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from('picks')
       .select('id', { count: 'exact', head: true })
       .eq('round_id', r.id)
       .eq('status', 'pending');
-    if (count === 0) gradedRoundIds.add(r.id);
+    if (!countError && count === 0) gradedRoundIds.add(r.id);
   }
 
   // For each round that had picks graded (or is overdue), check if all picks are done and auto-advance
@@ -385,6 +385,14 @@ export async function GET(_request: NextRequest) {
       .single();
 
     if (!round || round.status === 'completed') continue;
+
+    // Atomically mark round as 'grading' to prevent double-processing by concurrent cron runs
+    const { error: lockError } = await supabase
+      .from('rounds')
+      .update({ status: 'grading' })
+      .eq('id', roundId)
+      .eq('status', 'open'); // only succeeds if still 'open' — concurrent run won't match
+    if (lockError) { console.log(`[advance] round ${roundId}: failed to lock, skipping`); continue; }
 
     const pool = round.pools as any;
     const roundDeadlinePassed = new Date(round.deadline) < new Date();
@@ -466,6 +474,7 @@ export async function GET(_request: NextRequest) {
     }
 
     // Apply participant updates and activity feed
+    let updatesFailed = false;
     for (const [participantId, update] of updates) {
       const participant = participants.find((p: any) => p.id === participantId);
       if (!participant) continue;
@@ -479,7 +488,11 @@ export async function GET(_request: NextRequest) {
       if (update.rounds_survived !== undefined) dbUpdate.rounds_survived = update.rounds_survived;
       if (update.eliminated_round !== undefined) dbUpdate.eliminated_round = update.eliminated_round;
 
-      await supabase.from('pool_participants').update(dbUpdate).eq('id', participantId);
+      const { error: updateError } = await supabase.from('pool_participants').update(dbUpdate).eq('id', participantId);
+      if (updateError) {
+        console.error(`[advance] failed to update participant ${participantId}:`, updateError.message);
+        updatesFailed = true;
+      }
 
       const activityType = update.status === 'eliminated' ? 'eliminated'
         : update.status === 'winner' ? 'won_contest'
@@ -504,6 +517,13 @@ export async function GET(_request: NextRequest) {
           activity_type: activityType, metadata: activityMeta,
         });
       }
+    }
+
+    // Only mark round completed if all participant updates succeeded
+    if (updatesFailed) {
+      console.error(`[advance] round ${roundId}: some participant updates failed, reverting to open`);
+      await supabase.from('rounds').update({ status: 'open' }).eq('id', roundId);
+      continue;
     }
 
     // Mark round completed and lock all picks

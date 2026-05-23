@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { processRoundResults } from '@/lib/contest-engine';
+import { autoGradePendingPicks } from '@/lib/autoGrade';
 import type { PickStatus } from '@/types';
 
 export async function POST(_request: NextRequest) {
@@ -17,6 +18,9 @@ export async function POST(_request: NextRequest) {
   );
 
   try {
+
+  // Auto-grade any pending picks for completed games before advancing rounds
+  const picksGraded = await autoGradePendingPicks(supabase);
 
   // Find all open rounds with no pending picks — these need to be advanced
   const { data: openRounds } = await supabase

@@ -23,10 +23,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (body.deadline) {
     newDeadline = new Date(body.deadline).toISOString();
   } else {
-    const now = new Date();
+    // Default: tomorrow at 9:30 PM ET = 1:30 AM UTC two days from now
     const d = new Date();
     d.setUTCHours(1, 30, 0, 0);
-    if (d <= now) d.setUTCDate(d.getUTCDate() + 1);
+    d.setUTCDate(d.getUTCDate() + 2);
     newDeadline = d.toISOString();
   }
 

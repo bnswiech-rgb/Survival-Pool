@@ -16,6 +16,8 @@ export async function POST(_request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
+  try {
+
   // Find all open rounds with no pending picks — these need to be advanced
   const { data: openRounds } = await supabase
     .from('rounds')
@@ -147,4 +149,8 @@ export async function POST(_request: NextRequest) {
   }
 
   return NextResponse.json({ advancedRounds: advancedRounds.length, roundIds: advancedRounds });
+  } catch (e: any) {
+    console.error('[run-grader]', e);
+    return NextResponse.json({ error: e?.message ?? 'Internal error' }, { status: 500 });
+  }
 }

@@ -27,11 +27,12 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     setAutoGrading(true);
     try {
       const res = await fetch('/api/admin/run-grader', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok || data.error) toast.error(data.error || 'Failed to run grader');
-      else toast.success(`Graded ${data.graded ?? 0} picks, advanced ${data.advancedRounds ?? 0} rounds`);
-    } catch {
-      toast.error('Failed to run grader');
+      let data: any = {};
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok || data.error) toast.error(data.error || `HTTP ${res.status}`);
+      else toast.success(`Advanced ${data.advancedRounds ?? 0} rounds`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to run grader');
     }
     setAutoGrading(false);
   };

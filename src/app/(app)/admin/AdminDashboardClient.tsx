@@ -95,6 +95,13 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     else toast.success('Round advanced!');
   };
 
+  const extendDeadline = async (poolId: string) => {
+    const res = await fetch(`/api/admin/pools/${poolId}/extend-deadline`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) toast.error(data.error || 'Failed to extend deadline');
+    else toast.success(`Round ${data.round_number} deadline set to ${new Date(data.new_deadline).toLocaleString()}`);
+  };
+
   const forceComplete = async (poolId: string, poolName: string) => {
     if (!confirm(`Force complete "${poolName}"? This will crown the leader as winner and close the pool.`)) return;
     const res = await fetch(`/api/admin/pools/${poolId}/force-complete`, { method: 'POST' });
@@ -180,6 +187,9 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                     <div className="flex gap-2 flex-wrap">
                       <Button size="sm" variant="secondary" onClick={() => poolAction(pool.id, 'lock')}>
                         Lock
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => extendDeadline(pool.id)}>
+                        Extend Deadline
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => advanceRound(pool.id)}>
                         Advance Round

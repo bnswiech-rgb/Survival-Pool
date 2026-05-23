@@ -18,7 +18,6 @@ const FORMATS: { value: ContestFormat; label: string; desc: string }[] = [
   { value: 'first_to_x', label: 'First To X Wins', desc: 'Race to reach the target win count.' },
   { value: 'best_record', label: 'Best Record', desc: 'Most wins after N rounds wins.' },
   { value: 'streak_race', label: 'Streak Race', desc: 'Build the longest consecutive win streak.' },
-  { value: 'team_battle', label: 'Team Battle', desc: 'Compete in teams, last team standing wins.' },
 ];
 
 const TOTAL_STEPS = 6;
@@ -35,6 +34,8 @@ export default function CreatePoolPage() {
   const [maxEntries, setMaxEntries] = useState('');
 
   // Step 2: Format
+  const [isTeamPool, setIsTeamPool] = useState(false);
+  const [teamSize, setTeamSize] = useState('2');
   const [contestFormat, setContestFormat] = useState<ContestFormat>('classic');
   const [livesCount, setLivesCount] = useState('3');
   const [targetWins, setTargetWins] = useState('10');
@@ -49,9 +50,6 @@ export default function CreatePoolPage() {
   // Step 4: Schedule
   const [startDate, setStartDate] = useState('');
   const roundFrequency = 'daily';
-
-  // Team Battle
-  const [teamSize, setTeamSize] = useState('2');
 
   // Step 5: Rules
   const [pushRule, setPushRule] = useState<'advance' | 'eliminate' | 'repeat'>('advance');
@@ -68,13 +66,14 @@ export default function CreatePoolPage() {
         sport,
         visibility,
         max_entries: maxEntries ? parseInt(maxEntries) : null,
-        contest_format: contestFormat,
+        contest_format: isTeamPool ? 'team_battle' : contestFormat,
+        team_scoring: isTeamPool ? contestFormat : null,
+        team_size: isTeamPool ? parseInt(teamSize) || 2 : null,
         lives_count: parseInt(livesCount),
         target_wins: parseInt(targetWins),
         target_streak: parseInt(targetStreak),
         max_losses: maxLosses ? parseInt(maxLosses) : null,
         push_resets_streak: pushResetsStreak,
-        team_size: contestFormat === 'team_battle' ? parseInt(teamSize) || 2 : null,
         entry_fee_cents: 0,
         entry_fee_coins: parseInt(entryFeeCoins) || 0,
         rake_percentage: parseFloat(rakePercentage),
@@ -164,19 +163,57 @@ export default function CreatePoolPage() {
       {step === 2 && (
         <Card>
           <CardHeader><h3 className="font-bold text-white">Contest Format</h3></CardHeader>
-          <CardBody className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {FORMATS.map(f => (
-                <button key={f.value} type="button" onClick={() => setContestFormat(f.value)}
-                  className={`text-left p-4 rounded-xl border transition-colors ${
-                    contestFormat === f.value
-                      ? 'bg-purple-500/20 border-purple-500/50'
-                      : 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                  }`}>
-                  <div className="font-bold text-white text-sm">{f.label}</div>
-                  <div className="text-gray-400 text-xs mt-1">{f.desc}</div>
-                </button>
-              ))}
+          <CardBody className="space-y-5">
+            {/* Solo / Team toggle */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-300">Pool Type</label>
+              <div className="flex gap-2">
+                {[
+                  { value: false, label: 'Solo', desc: 'Each player picks individually' },
+                  { value: true, label: 'Team', desc: 'Players grouped into teams — all picks must hit (parlay)' },
+                ].map(opt => (
+                  <button key={String(opt.value)} type="button" onClick={() => setIsTeamPool(opt.value)}
+                    className={`flex-1 text-left px-4 py-3 rounded-xl border transition-colors ${
+                      isTeamPool === opt.value
+                        ? 'bg-green-500/20 border-green-500/50'
+                        : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                    }`}>
+                    <div className="font-bold text-white text-sm">{opt.label}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Team size — only shown for team pools */}
+            {isTeamPool && (
+              <Input
+                label="Players Per Team"
+                type="number"
+                value={teamSize}
+                onChange={e => setTeamSize(e.target.value)}
+                min="2"
+                max="10"
+                hint="All players on a team must win for the team to advance. Any loss = team loses."
+              />
+            )}
+
+            {/* Format picker — same options for solo and team */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-300">Contest Style</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {FORMATS.map(f => (
+                  <button key={f.value} type="button" onClick={() => setContestFormat(f.value)}
+                    className={`text-left p-4 rounded-xl border transition-colors ${
+                      contestFormat === f.value
+                        ? 'bg-purple-500/20 border-purple-500/50'
+                        : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                    }`}>
+                    <div className="font-bold text-white text-sm">{f.label}</div>
+                    <div className="text-gray-400 text-xs mt-1">{f.desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Format-specific settings */}
@@ -200,19 +237,6 @@ export default function CreatePoolPage() {
             )}
             {contestFormat === 'best_record' && (
               <Input label="Contest Duration (rounds)" type="number" value={targetWins} onChange={e => setTargetWins(e.target.value)} min="1" hint="How many rounds before determining the winner" />
-            )}
-            {contestFormat === 'team_battle' && (
-              <div className="space-y-3">
-                <Input
-                  label="Players Per Team"
-                  type="number"
-                  value={teamSize}
-                  onChange={e => setTeamSize(e.target.value)}
-                  min="2"
-                  max="10"
-                  hint="All players on a team must win their pick for the team to advance (parlay). Any loss eliminates the team."
-                />
-              </div>
             )}
           </CardBody>
         </Card>
@@ -342,8 +366,8 @@ export default function CreatePoolPage() {
                 { label: 'Frequency', value: roundFrequency },
                 { label: 'Push Rule', value: pushRule },
                 { label: 'All-Lose Rule', value: allLoseRule },
+                { label: 'Pool Type', value: isTeamPool ? `Team (${teamSize} per team)` : 'Solo' },
                 { label: 'Max Entries', value: maxEntries || 'Unlimited' },
-                ...(contestFormat === 'team_battle' ? [{ label: 'Players Per Team', value: teamSize }] : []),
               ].map(item => (
                 <div key={item.label} className="bg-gray-800 rounded-lg px-3 py-2">
                   <div className="text-xs text-gray-500">{item.label}</div>

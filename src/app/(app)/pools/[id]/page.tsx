@@ -61,6 +61,8 @@ export default async function PoolDetailPage({ params }: Props) {
   let currentUser = null;
   let picks: any[] = [];
 
+  let myTeam: any = null;
+
   if (user) {
     const [{ data: prof }, { data: myP }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
@@ -68,6 +70,16 @@ export default async function PoolDetailPage({ params }: Props) {
     ]);
     currentUser = prof;
     myParticipation = myP;
+
+    // For team pools, fetch the user's team + teammates
+    if (pool?.contest_format === 'team_battle' && myParticipation?.team_id) {
+      const { data: teamData } = await supabase
+        .from('teams')
+        .select('*, pool_participants(user_id, profiles(username, avatar_url))')
+        .eq('id', myParticipation.team_id)
+        .single();
+      myTeam = teamData;
+    }
 
     if (currentRound) {
       const { data: pick } = await supabase
@@ -105,6 +117,7 @@ export default async function PoolDetailPage({ params }: Props) {
       currentUser={currentUser}
       initialPicks={picks}
       currentRoundGradedPicks={currentRoundGradedPicks}
+      initialMyTeam={myTeam}
     />
   );
 }

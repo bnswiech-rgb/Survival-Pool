@@ -23,6 +23,7 @@ interface Props {
   currentUser: Profile | null;
   initialPicks: Pick[];
   currentRoundGradedPicks?: { user_id: string; status: string }[];
+  initialMyTeam?: any;
 }
 
 const TABS = ['Overview', 'Picks', 'Survivors', 'History', 'Chat'];
@@ -37,6 +38,7 @@ export function PoolDetailClient({
   currentUser,
   initialPicks,
   currentRoundGradedPicks = [],
+  initialMyTeam = null,
 }: Props) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [participants, setParticipants] = useState(initialParticipants);
@@ -48,6 +50,10 @@ export function PoolDetailClient({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [roundOpen, setRoundOpen] = useState(initialCurrentRound?.status === 'open');
+  const [myTeam, setMyTeam] = useState<any>(initialMyTeam);
+  const [teamName, setTeamName] = useState('');
+  const [teamCode, setTeamCode] = useState('');
+  const [teamLoading, setTeamLoading] = useState(false);
   const supabase = createClient();
 
   const { netPrizePool } = calculatePrizePool(
@@ -110,6 +116,52 @@ export function PoolDetailClient({
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [pool.id, currentUser?.id, supabase]);
+
+  const handleCreateTeam = async () => {
+    if (!teamName.trim()) { toast.error('Enter a team name'); return; }
+    setTeamLoading(true);
+    try {
+      const res = await fetch(`/api/pools/${pool.id}/teams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: teamName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create team');
+      setMyTeam({ ...data.team, pool_participants: [{ user_id: currentUser?.id, profiles: { username: currentUser?.username, avatar_url: currentUser?.avatar_url } }] });
+      setTeamName('');
+      toast.success('Team created!');
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setTeamLoading(false);
+  };
+
+  const handleJoinTeam = async () => {
+    if (!teamCode.trim()) { toast.error('Enter an invite code'); return; }
+    setTeamLoading(true);
+    try {
+      const res = await fetch(`/api/pools/${pool.id}/teams/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_code: teamCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to join team');
+      // Refresh team data
+      const { data: teamData } = await supabase
+        .from('teams')
+        .select('*, pool_participants(user_id, profiles(username, avatar_url))')
+        .eq('id', data.team.id)
+        .single();
+      setMyTeam(teamData);
+      setTeamCode('');
+      toast.success(`Joined ${data.team.name}!`);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setTeamLoading(false);
+  };
 
   const handleJoin = async () => {
     if (!currentUser) { toast.error('Please log in first'); return; }
@@ -309,6 +361,87 @@ export function PoolDetailClient({
       {activeTab === 'Overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+
+            {/* Team section — only for team_battle pools */}
+            {pool.contest_format === 'team_battle' && myParticipation && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Users size={18} className="text-purple-400" />
+                    <h3 className="font-bold text-white">Your Team</h3>
+                  </div>
+                </CardHeader>
+                <CardBody>
+                  {myTeam ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-bold text-lg">{myTeam.name}</span>
+                        <span className="text-xs text-gray-500">{(pool as any).team_size ? `${(myTeam.pool_participants ?? []).length}/${(pool as any).team_size} members` : `${(myTeam.pool_participants ?? []).length} members`}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(myTeam.pool_participants ?? []).map((m: any) => (
+                          <div key={m.user_id} className="flex items-center gap-1.5 bg-gray-800 rounded-full px-3 py-1">
+                            <Avatar src={m.profiles?.avatar_url} username={m.profiles?.username ?? '?'} size="xs" />
+                            <span className="text-sm text-white">{m.profiles?.username ?? 'Unknown'}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="pt-2 border-t border-gray-800">
+                        <div className="text-xs text-gray-400 mb-1">Team Invite Code</div>
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm font-bold text-green-400 bg-gray-800 px-3 py-1.5 rounded flex-1 tracking-widest">
+                            {myTeam.invite_code}
+                          </code>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(myTeam.invite_code); toast.success('Invite code copied!'); }}
+                            className="text-xs text-gray-400 hover:text-white px-2 py-1.5 border border-gray-700 rounded"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">Share this code with your teammates so they can join your team</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-400 font-medium">Create a new team</p>
+                        <div className="flex gap-2">
+                          <input
+                            value={teamName}
+                            onChange={e => setTeamName(e.target.value)}
+                            placeholder="Team name..."
+                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                            onKeyDown={e => e.key === 'Enter' && handleCreateTeam()}
+                          />
+                          <Button onClick={handleCreateTeam} loading={teamLoading} size="sm">Create</Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <div className="flex-1 h-px bg-gray-800" />
+                        <span>or</span>
+                        <div className="flex-1 h-px bg-gray-800" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-400 font-medium">Join with an invite code</p>
+                        <div className="flex gap-2">
+                          <input
+                            value={teamCode}
+                            onChange={e => setTeamCode(e.target.value.toUpperCase())}
+                            placeholder="Enter code..."
+                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500 tracking-widest uppercase"
+                            maxLength={6}
+                            onKeyDown={e => e.key === 'Enter' && handleJoinTeam()}
+                          />
+                          <Button onClick={handleJoinTeam} loading={teamLoading} size="sm" variant="secondary">Join</Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">

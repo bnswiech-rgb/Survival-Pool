@@ -56,6 +56,17 @@ export function PoolDetailClient({
   const [teamLoading, setTeamLoading] = useState(false);
   const supabase = createClient();
 
+  // Auto-fill invite code from URL param (e.g. ?joinTeam=XK9F2A)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('joinTeam');
+    if (code) {
+      setTeamCode(code.toUpperCase());
+      setActiveTab('Overview');
+    }
+  }, []);
+
   const { netPrizePool } = calculatePrizePool(
     pool.entry_fee_cents,
     participants.length,
@@ -387,19 +398,27 @@ export function PoolDetailClient({
                         ))}
                       </div>
                       <div className="pt-2 border-t border-gray-800">
-                        <div className="text-xs text-gray-400 mb-1">Team Invite Code</div>
+                        <div className="text-xs text-gray-400 mb-1">Team Invite</div>
                         <div className="flex items-center gap-2">
                           <code className="text-sm font-bold text-green-400 bg-gray-800 px-3 py-1.5 rounded flex-1 tracking-widest">
                             {myTeam.invite_code}
                           </code>
                           <button
-                            onClick={() => { navigator.clipboard.writeText(myTeam.invite_code); toast.success('Invite code copied!'); }}
-                            className="text-xs text-gray-400 hover:text-white px-2 py-1.5 border border-gray-700 rounded"
+                            onClick={() => {
+                              const link = `${window.location.origin}/pools/${pool.id}?joinTeam=${myTeam.invite_code}`;
+                              if (navigator.share) {
+                                navigator.share({ title: `Join my team in ${pool.name}`, url: link });
+                              } else {
+                                navigator.clipboard.writeText(link);
+                                toast.success('Invite link copied!');
+                              }
+                            }}
+                            className="text-xs text-gray-400 hover:text-white px-2 py-1.5 border border-gray-700 rounded whitespace-nowrap"
                           >
-                            Copy
+                            Share link
                           </button>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">Share this code with your teammates so they can join your team</p>
+                        <p className="text-xs text-gray-600 mt-1">Share this link — teammates land on the pool page with the code pre-filled</p>
                       </div>
                     </div>
                   ) : (

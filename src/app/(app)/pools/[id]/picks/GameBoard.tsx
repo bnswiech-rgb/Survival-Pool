@@ -46,7 +46,9 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
   const [selectedPick, setSelectedPick] = useState<GamePick | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<'all' | 'spread' | 'total' | 'moneyline'>('all');
-  const lockedSport = (pool.sport !== 'All Sports' && SPORTS.includes(pool.sport as any)) ? pool.sport : null;
+  // Normalize sport — "All Sports" means no lock, show all with tabs
+  const normalizedSport = pool.sport === 'All Sports' ? 'All' : pool.sport;
+  const lockedSport = (normalizedSport !== 'All' && SPORTS.includes(normalizedSport as any)) ? normalizedSport : null;
   const [sportFilter, setSportFilter] = useState<string>(lockedSport ?? 'All');
 
   useEffect(() => {

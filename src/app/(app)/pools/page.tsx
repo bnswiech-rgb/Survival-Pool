@@ -23,7 +23,7 @@ export default async function PoolsPage({ searchParams }: Props) {
 
   let query = supabase
     .from('pools')
-    .select('*, pool_participants(user_id, current_streak, status, profiles(username))')
+    .select('*, pool_participants(user_id, team_id, current_streak, status, profiles(username))')
     .eq('visibility', 'public')
     .order('created_at', { ascending: false });
 
@@ -80,7 +80,13 @@ export default async function PoolsPage({ searchParams }: Props) {
     const leaders_count = leader_streak > 0 ? participants.filter((pp: any) => projectedStreak(pp) === leader_streak).length : 0;
     const winner = participants.find((pp: any) => pp.status === 'winner');
     const winner_username = winner?.profiles?.username ?? null;
-    return { ...p, participant_count, alive_count, leader_streak, leaders_count, winner_username };
+    const team_count = p.contest_format === 'team_battle'
+      ? new Set(participants.map((pp: any) => pp.team_id).filter(Boolean)).size
+      : null;
+    const alive_team_count = p.contest_format === 'team_battle'
+      ? new Set(participants.filter((pp: any) => pp.status === 'active' || pp.status === 'advanced').map((pp: any) => pp.team_id).filter(Boolean)).size
+      : null;
+    return { ...p, participant_count, alive_count, leader_streak, leaders_count, winner_username, team_count, alive_team_count };
   }) ?? [];
 
   return (

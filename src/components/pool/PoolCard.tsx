@@ -93,9 +93,13 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-1 text-gray-400">
                 <Users size={14} />
-                <span>{paidEntries}{pool.max_entries ? ` / ${pool.max_entries}` : ''} entries</span>
+                {pool.contest_format === 'team_battle' ? (
+                  <span>{(pool as any).team_count ?? 0} {((pool as any).team_count ?? 0) === 1 ? 'team' : 'teams'} entered</span>
+                ) : (
+                  <span>{paidEntries}{pool.max_entries ? ` / ${pool.max_entries}` : ''} entries</span>
+                )}
               </div>
-              {pool.alive_count !== undefined && pool.alive_count < paidEntries && (
+              {pool.contest_format !== 'team_battle' && pool.alive_count !== undefined && pool.alive_count < paidEntries && (
                 <span className="text-green-400 text-xs font-medium">{pool.alive_count} alive</span>
               )}
             </div>
@@ -113,6 +117,10 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
                 {(pool as any).leader_streak > 0
                   ? <><span className="text-white font-bold">{(pool as any).leaders_count}</span> {(pool as any).leaders_count === 1 ? 'person' : 'people'} at <span className="text-green-400 font-bold">{(pool as any).leader_streak}W</span></>
                   : 'No picks yet'}
+              </span>
+            ) : pool.contest_format === 'team_battle' ? (
+              <span className="text-gray-400">
+                <span className="text-white font-bold">{(pool as any).alive_team_count ?? (pool as any).team_count ?? 0}</span> {((pool as any).alive_team_count ?? (pool as any).team_count ?? 0) === 1 ? 'team' : 'teams'} remain
               </span>
             ) : (
               <span className="text-gray-400">

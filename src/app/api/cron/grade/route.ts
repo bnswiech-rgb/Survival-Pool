@@ -479,11 +479,17 @@ export async function GET(_request: NextRequest) {
     }
 
     console.log(`[advance] picksMap size: ${picksMap.size}, sample:`, JSON.stringify([...picksMap.entries()].slice(0,3)));
+    // For team_battle, use team_scoring as the effective contest format
+    // (team_scoring holds the actual style: classic, lives, first_to_x, etc.)
+    const effectiveFormat = pool.contest_format === 'team_battle' && pool.team_scoring
+      ? pool.team_scoring
+      : pool.contest_format;
+
     const { updates, startTiebreaker } = processRoundResults(
       participants as any,
       picksMap,
       {
-        contest_format: pool.contest_format,
+        contest_format: effectiveFormat,
         push_rule: pool.push_rule,
         all_lose_rule: pool.all_lose_rule,
         lives_count: pool.lives_count,

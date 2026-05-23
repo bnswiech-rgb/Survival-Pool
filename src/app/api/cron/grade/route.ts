@@ -358,6 +358,21 @@ export async function GET(_request: NextRequest) {
     .lt('deadline', new Date().toISOString());
   for (const r of overdueRounds ?? []) gradedRoundIds.add(r.id);
 
+  // Also include open rounds where all picks are already graded (no pending remain)
+  // This handles the case where picks were graded in a prior run but round never closed
+  const { data: openRounds } = await supabase
+    .from('rounds')
+    .select('id')
+    .eq('status', 'open');
+  for (const r of openRounds ?? []) {
+    const { count } = await supabase
+      .from('picks')
+      .select('id', { count: 'exact', head: true })
+      .eq('round_id', r.id)
+      .eq('status', 'pending');
+    if (count === 0) gradedRoundIds.add(r.id);
+  }
+
   // For each round that had picks graded (or is overdue), check if all picks are done and auto-advance
   const advancedRounds: string[] = [];
 

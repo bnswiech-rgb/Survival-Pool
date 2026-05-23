@@ -28,6 +28,8 @@ interface Props {
 }
 
 const TABS = ['Overview', 'Picks', 'Survivors', 'History', 'Chat'];
+const getTabLabel = (tab: string, isTeamBattle: boolean) =>
+  tab === 'Survivors' && isTeamBattle ? 'Teams' : tab;
 
 export function PoolDetailClient({
   pool,
@@ -362,7 +364,7 @@ export function PoolDetailClient({
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            {tab}
+            {getTabLabel(tab, pool.contest_format === 'team_battle')}
             {tab === 'Picks' && canSubmitPick && !hasSubmittedPick && (
               <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-yellow-400 align-middle" />
             )}

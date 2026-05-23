@@ -88,6 +88,39 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!participant) return NextResponse.json({ error: 'Not a participant in this contest' }, { status: 403 });
   if (participant.status === 'eliminated') return NextResponse.json({ error: 'You are eliminated from this contest' }, { status: 400 });
 
+  // For team_battle: block duplicate picks within the same team
+  const { data: pool } = await supabase.from('pools').select('contest_format').eq('id', id).single();
+  if (pool?.contest_format === 'team_battle' && participant.team_id) {
+    // Get all teammates in this pool
+    const { data: teammates } = await supabase
+      .from('pool_participants')
+      .select('user_id')
+      .eq('pool_id', id)
+      .eq('team_id', participant.team_id)
+      .neq('user_id', user.id);
+
+    if (teammates?.length) {
+      const teammateIds = teammates.map((t: any) => t.user_id);
+      const { data: conflictingPick } = await supabase
+        .from('picks')
+        .select('id, profiles(username)')
+        .eq('round_id', round_id)
+        .eq('game', game)
+        .eq('side', side)
+        .eq('pick_type', pick_type)
+        .in('user_id', teammateIds)
+        .maybeSingle();
+
+      if (conflictingPick) {
+        const who = (conflictingPick as any).profiles?.username ?? 'A teammate';
+        return NextResponse.json(
+          { error: `${who} already has this pick — teammates must make different picks` },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
   // Upsert pick
   const { data: pick, error } = await supabase
     .from('picks')

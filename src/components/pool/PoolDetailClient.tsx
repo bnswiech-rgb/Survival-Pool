@@ -47,6 +47,7 @@ export function PoolDetailClient({
   const [historyRounds, setHistoryRounds] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [roundOpen, setRoundOpen] = useState(initialCurrentRound?.status === 'open');
   const supabase = createClient();
 
   const { netPrizePool } = calculatePrizePool(
@@ -60,7 +61,10 @@ export function PoolDetailClient({
   const isStreakRace = pool.contest_format === 'streak_race';
   // Project live streak/wins/losses from current round's already-graded picks,
   // so standings reflect reality before the round officially closes at 4 AM.
-  const livePickByUser = Object.fromEntries(currentRoundGradedPicks.map(p => [p.user_id, p.status]));
+  // Only apply projection while round is still open — once closed, DB values are authoritative.
+  const livePickByUser = roundOpen
+    ? Object.fromEntries(currentRoundGradedPicks.map(p => [p.user_id, p.status]))
+    : {};
   function projectStreak(p: PoolParticipant): number {
     const stored = (p as any).current_streak ?? 0;
     const pickStatus = livePickByUser[p.user_id];
@@ -95,6 +99,12 @@ export function PoolDetailClient({
             const mine = data.find((p: any) => p.user_id === currentUser?.id);
             if (mine) setMyParticipation(mine as any);
           }
+        }
+      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rounds', filter: `pool_id=eq.${pool.id}` },
+        (payload: any) => {
+          if (payload.new?.status === 'completed') setRoundOpen(false);
+          if (payload.new?.status === 'open') setRoundOpen(true);
         }
       )
       .subscribe();

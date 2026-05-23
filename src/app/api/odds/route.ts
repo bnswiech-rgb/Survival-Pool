@@ -27,19 +27,30 @@ const SPORT_KEYS: Record<string, string[]> = {
 // All supported sport keys combined
 const ALL_KEYS = Object.values(SPORT_KEYS).flat();
 
-function getEligibleRange(startDate?: string): { start: Date; end: Date } {
+function getEligibleRange(startDate?: string, deadline?: string): { start: Date; end: Date } {
   const now = new Date();
-  const end = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-  // If pool has a start_date, don't show games before midnight ET on that date (4 AM UTC)
+  // Start: midnight ET on the pool's start_date, or now if that's already past
+  let start = now;
   if (startDate) {
-    const dateOnly = startDate.substring(0, 10); // always "YYYY-MM-DD"
+    const dateOnly = startDate.substring(0, 10);
     const parts = dateOnly.split('-').map(Number);
     const poolStart = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 4, 0, 0, 0));
-    return { start: poolStart > now ? poolStart : now, end };
+    start = poolStart > now ? poolStart : now;
   }
 
-  return { start: now, end };
+  // End: use the round deadline so games after the deadline day aren't shown
+  let end: Date;
+  if (deadline) {
+    const dl = new Date(deadline);
+    const etOffset = -4 * 60;
+    const dlET = new Date(dl.getTime() + etOffset * 60000);
+    end = new Date(Date.UTC(dlET.getUTCFullYear(), dlET.getUTCMonth(), dlET.getUTCDate() + 1, 4, 0, 0, 0));
+  } else {
+    end = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  }
+
+  return { start, end };
 }
 
 export async function GET(request: NextRequest) {
@@ -52,7 +63,8 @@ export async function GET(request: NextRequest) {
 
   const keysToFetch = sport === 'All' ? ALL_KEYS : (SPORT_KEYS[sport] ?? ALL_KEYS);
   const startDate = searchParams.get('start') ?? undefined;
-  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(startDate);
+  const deadline = searchParams.get('deadline') ?? undefined;
+  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(startDate, deadline);
 
   const allGames: any[] = [];
 

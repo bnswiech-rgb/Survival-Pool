@@ -110,6 +110,20 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     else toast.success(`Round ${data.round_number} deadline set to ${new Date(data.new_deadline).toLocaleString()}`);
   };
 
+  const deleteRoundsFrom = async (poolId: string, poolName: string) => {
+    const input = prompt(`Delete rounds from which number onward in "${poolName}"?\n(e.g. enter 7 to delete rounds 7, 8, 9... and reopen round 6)`);
+    const from_round = parseInt(input ?? '');
+    if (isNaN(from_round)) return;
+    const res = await fetch(`/api/admin/pools/${poolId}/delete-rounds`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from_round }),
+    });
+    const data = await res.json();
+    if (!res.ok) toast.error(data.error || 'Failed to delete rounds');
+    else toast.success(`Deleted rounds ${data.deleted.join(', ')} — round ${data.reopened} reopened`);
+  };
+
   const forceComplete = async (poolId: string, poolName: string) => {
     if (!confirm(`Force complete "${poolName}"? This will crown the leader as winner and close the pool.`)) return;
     const res = await fetch(`/api/admin/pools/${poolId}/force-complete`, { method: 'POST' });
@@ -210,6 +224,9 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => resetRound(pool.id)}>
                         Reset Round
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => deleteRoundsFrom(pool.id, pool.name)}>
+                        Delete Rounds
                       </Button>
                       <Button size="sm" variant="danger" onClick={() => forceComplete(pool.id, pool.name)}>
                         Force Complete

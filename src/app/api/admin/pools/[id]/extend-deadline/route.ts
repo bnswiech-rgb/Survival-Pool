@@ -18,17 +18,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const body = await request.json().catch(() => ({}));
 
-  // Find the latest round for this pool (any status)
-  const { data: round } = await supabase
-    .from('rounds')
-    .select('id, round_number, deadline')
-    .eq('pool_id', id)
-    .order('round_number', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!round) return NextResponse.json({ error: 'No round found for this pool' }, { status: 404 });
-
   // Use provided deadline or default to tonight at 9:30 PM ET (1:30 AM UTC next day)
   let newDeadline: string;
   if (body.deadline) {
@@ -39,6 +28,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     d.setUTCHours(1, 30, 0, 0);
     if (d <= now) d.setUTCDate(d.getUTCDate() + 1);
     newDeadline = d.toISOString();
+  }
+
+  // Find the latest round for this pool (any status)
+  const { data: round } = await supabase
+    .from('rounds')
+    .select('id, round_number, deadline')
+    .eq('pool_id', id)
+    .order('round_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!round) {
+    // No round exists — create round 1
+    const { data: newRound, error: createError } = await supabase
+      .from('rounds')
+      .insert({ pool_id: id, round_number: 1, deadline: newDeadline, status: 'open' })
+      .select()
+      .single();
+    if (createError) return NextResponse.json({ error: createError.message }, { status: 500 });
+    return NextResponse.json({ round_number: 1, new_deadline: newDeadline, created: true });
   }
 
   const { error } = await supabase

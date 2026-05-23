@@ -33,10 +33,8 @@ function gameContainsTeams(pickGame: string, homeTeam: string, awayTeam: string)
   const g = normalizeName(pickGame);
   const h = normalizeName(homeTeam);
   const a = normalizeName(awayTeam);
-  // Check both full name and last word (short name)
-  const hLast = h.split(' ').pop()!;
-  const aLast = a.split(' ').pop()!;
-  return (g.includes(h) || g.includes(hLast)) && (g.includes(a) || g.includes(aLast));
+  // Require full team name match — last-word fallback was too loose and caused wrong matches
+  return g.includes(h) && g.includes(a);
 }
 
 function sideMatchesTeam(side: string, team: string): boolean {
@@ -201,6 +199,9 @@ export async function autoGradePendingPicks(supabase: any): Promise<number> {
     }
 
     if (!result) continue;
+
+    // Safety check: never grade a pick whose game hasn't started yet
+    if (pick.game_start_time && new Date(pick.game_start_time) > new Date()) continue;
 
     await supabase
       .from('picks')

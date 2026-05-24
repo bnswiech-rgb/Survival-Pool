@@ -110,6 +110,14 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     else toast.success(`Round ${data.round_number} deadline set to ${new Date(data.new_deadline).toLocaleString()}`);
   };
 
+  const autoAssignTeams = async (poolId: string, poolName: string) => {
+    if (!confirm(`Randomly assign all teamless participants in "${poolName}" into teams? This cannot be undone.`)) return;
+    const res = await fetch(`/api/admin/pools/${poolId}/auto-assign-teams`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) toast.error(data.error || 'Failed to assign teams');
+    else toast.success(`Created ${data.teamsCreated} teams, assigned ${data.assigned} players`);
+  };
+
   const deleteRoundsFrom = async (poolId: string, poolName: string) => {
     const input = prompt(`Delete rounds from which number onward in "${poolName}"?\n(e.g. enter 7 to delete rounds 7, 8, 9... and reopen round 6)`);
     const from_round = parseInt(input ?? '');
@@ -225,6 +233,11 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                       <Button size="sm" variant="secondary" onClick={() => resetRound(pool.id)}>
                         Reset Round
                       </Button>
+                      {pool.contest_format === 'team_battle' && (
+                        <Button size="sm" variant="secondary" onClick={() => autoAssignTeams(pool.id, pool.name)}>
+                          Auto-Assign Teams
+                        </Button>
+                      )}
                       <Button size="sm" variant="danger" onClick={() => deleteRoundsFrom(pool.id, pool.name)}>
                         Delete Rounds
                       </Button>

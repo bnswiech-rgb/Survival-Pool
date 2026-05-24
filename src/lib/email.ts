@@ -1,7 +1,5 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function sendNewPoolEmail(pool: {
   id: string;
   name: string;
@@ -51,6 +49,8 @@ export async function sendNewPoolEmail(pool: {
       </p>
     </div>
   `;
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   // Send in batches of 50 (Resend limit per request)
   for (let i = 0; i < recipients.length; i += 50) {

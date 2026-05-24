@@ -118,6 +118,14 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     else toast.success(`Created ${data.teamsCreated} teams, assigned ${data.assigned} players${data.voided ? `, removed ${data.voided} (couldn't form full team)` : ''}`);
   };
 
+  const mergeSmallTeams = async (poolId: string, poolName: string) => {
+    if (!confirm(`Merge undersized teams in "${poolName}" together? Solo/duo teams will be combined.`)) return;
+    const res = await fetch(`/api/admin/pools/${poolId}/merge-small-teams`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) toast.error(data.error || 'Failed to merge teams');
+    else toast.success(`Merged ${data.merged} players, removed ${data.deleted} empty teams`);
+  };
+
   const deleteRoundsFrom = async (poolId: string, poolName: string) => {
     const input = prompt(`Delete rounds from which number onward in "${poolName}"?\n(e.g. enter 7 to delete rounds 7, 8, 9... and reopen round 6)`);
     const from_round = parseInt(input ?? '');
@@ -236,6 +244,11 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                       {pool.contest_format === 'team_battle' && (
                         <Button size="sm" variant="secondary" onClick={() => autoAssignTeams(pool.id, pool.name)}>
                           Auto-Assign Teams
+                        </Button>
+                      )}
+                      {pool.contest_format === 'team_battle' && (
+                        <Button size="sm" variant="secondary" onClick={() => mergeSmallTeams(pool.id, pool.name)}>
+                          Merge Small Teams
                         </Button>
                       )}
                       <Button size="sm" variant="danger" onClick={() => deleteRoundsFrom(pool.id, pool.name)}>

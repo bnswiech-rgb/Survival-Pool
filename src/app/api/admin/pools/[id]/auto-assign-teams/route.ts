@@ -25,7 +25,31 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     .eq('pool_id', poolId)
     .is('team_id', null);
 
-  if (!solo?.length) return NextResponse.json({ teamsCreated: 0, assigned: 0, filled: 0 });
+  if (!solo?.length) return NextResponse.json({ teamsCreated: 0, assigned: 0, filled: 0, voided: 0 });
+
+  // Find which solo players have submitted a pick this round
+  const { data: currentRound } = await supabase
+    .from('rounds')
+    .select('id')
+    .eq('pool_id', poolId)
+    .in('status', ['open', 'grading'])
+    .order('round_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const submittedUserIds = new Set<string>();
+  if (currentRound) {
+    const { data: submittedPicks } = await supabase
+      .from('picks')
+      .select('user_id')
+      .eq('round_id', currentRound.id)
+      .in('user_id', solo.map((s: any) => s.user_id));
+    for (const p of submittedPicks ?? []) submittedUserIds.add(p.user_id);
+  }
+
+  // Split solos into submitted and not submitted, both shuffled
+  const withPick = [...solo.filter((s: any) => submittedUserIds.has(s.user_id))].sort(() => Math.random() - 0.5);
+  const withoutPick = [...solo.filter((s: any) => !submittedUserIds.has(s.user_id))].sort(() => Math.random() - 0.5);
 
   // Find incomplete teams (have members but fewer than teamSize)
   const { data: allParticipants } = await supabase
@@ -40,13 +64,13 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     teamMemberCount.set(p.team_id, (teamMemberCount.get(p.team_id) ?? 0) + 1);
   }
 
-  // Teams that need more members, sorted by most members first (fill biggest gaps last)
+  // Teams that need more members, sorted by most members first
   const incompleteTeams = [...teamMemberCount.entries()]
     .filter(([, count]) => count < teamSize)
-    .sort((a, b) => b[1] - a[1]); // most members first so nearly-full teams get filled first
+    .sort((a, b) => b[1] - a[1]);
 
-  // Shuffle solo players
-  const queue = [...solo].sort(() => Math.random() - 0.5);
+  // Queue: pick-submitted solos first, then no-pick solos
+  const queue = [...withPick, ...withoutPick];
 
   let filled = 0;
   let teamsCreated = 0;
@@ -67,10 +91,12 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   }
 
   // Step 2: Create new full teams from remaining solo players
-  // Any leftover players that can't form a complete team get removed from the pool
+  // Leftover players who couldn't form a complete team:
+  // - if they have a pick, keep them (add to nearest incomplete team or form undersized team as last resort)
+  // - if they have no pick, boot them
   const fullTeamCount = Math.floor(queue.length / teamSize);
   const leftoverStart = fullTeamCount * teamSize;
-  const leftovers = queue.slice(leftoverStart); // players that can't form a complete team
+  const leftovers = queue.slice(leftoverStart);
   const toGroup = queue.slice(0, leftoverStart);
 
   for (let i = 0; i < toGroup.length; i += teamSize) {
@@ -97,15 +123,39 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     }
   }
 
-  // Remove leftover players who couldn't form a complete team
+  // Handle leftovers: boot no-pick solos, keep pick-submitted solos
   let voided = 0;
   if (leftovers.length > 0) {
-    const { error: voidError } = await supabase
-      .from('pool_participants')
-      .delete()
-      .in('id', leftovers.map(m => m.id));
+    const leftoverWithPick = leftovers.filter((m: any) => submittedUserIds.has(m.user_id));
+    const leftoverNoPick = leftovers.filter((m: any) => !submittedUserIds.has(m.user_id));
 
-    if (!voidError) voided = leftovers.length;
+    // Boot no-pick leftovers
+    if (leftoverNoPick.length > 0) {
+      const { error: voidError } = await supabase
+        .from('pool_participants')
+        .delete()
+        .in('id', leftoverNoPick.map((m: any) => m.id));
+      if (!voidError) voided = leftoverNoPick.length;
+    }
+
+    // Pick-submitted leftovers: add to the last created team (they'll be short but at least have picks)
+    if (leftoverWithPick.length > 0 && teamsCreated > 0) {
+      // Find the last team we created by querying recent teams for this pool
+      const { data: lastTeam } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('pool_id', poolId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lastTeam) {
+        await supabase
+          .from('pool_participants')
+          .update({ team_id: lastTeam.id })
+          .in('id', leftoverWithPick.map((m: any) => m.id));
+        assigned += leftoverWithPick.length;
+      }
+    }
   }
 
   return NextResponse.json({ teamsCreated, assigned, filled, voided });

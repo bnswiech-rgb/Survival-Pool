@@ -1017,3 +1017,4 @@ export function PoolDetailClient({
     </div>
   );
 }
+

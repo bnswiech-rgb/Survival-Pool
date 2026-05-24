@@ -36,7 +36,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
   if (!pool) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
 
-  if (pool.status !== 'open' && pool.status !== 'upcoming') {
+  const allowActive = pool.contest_format === 'team_battle';
+  if (pool.status !== 'open' && pool.status !== 'upcoming' && !(allowActive && pool.status === 'active')) {
     return NextResponse.json({ error: 'Contest is not open for entries' }, { status: 400 });
   }
 

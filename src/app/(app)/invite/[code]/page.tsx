@@ -87,7 +87,7 @@ export default function InvitePage() {
     );
   }
 
-  const isOpen = pool.status === 'open' || pool.status === 'upcoming';
+  const isOpen = pool.status === 'open' || pool.status === 'upcoming' || (pool.contest_format === 'team_battle' && pool.status === 'active');
 
   return (
     <div className="max-w-lg mx-auto space-y-6">

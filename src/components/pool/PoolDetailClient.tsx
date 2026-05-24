@@ -301,12 +301,12 @@ export function PoolDetailClient({
           </div>
           <div className="text-gray-400">{pool.sport}</div>
         </div>
-        {!myParticipation && (pool.status === 'open' || pool.status === 'upcoming' || (pool.contest_format === 'streak_race' && pool.status === 'active')) && currentUser && (
+        {!myParticipation && (pool.status === 'open' || pool.status === 'upcoming' || (['streak_race', 'team_battle'].includes(pool.contest_format) && pool.status === 'active')) && currentUser && (
           <Button onClick={handleJoin} loading={joiningLoading} size="lg">
             Join Contest {pool.entry_fee_cents > 0 ? `• ${formatCents(pool.entry_fee_cents)}` : '• Free'}
           </Button>
         )}
-        {!myParticipation && pool.contest_format !== 'streak_race' && (pool.status === 'active' || pool.status === 'completed') && (
+        {!myParticipation && !['streak_race', 'team_battle'].includes(pool.contest_format) && (pool.status === 'active' || pool.status === 'completed') && (
           <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-400">
             🔒 This pool has already started — new entries are closed
           </div>

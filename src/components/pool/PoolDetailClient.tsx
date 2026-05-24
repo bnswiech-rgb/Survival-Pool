@@ -796,12 +796,16 @@ export function PoolDetailClient({
                         <CardBody>
                           <div className="text-xs text-gray-500 mb-2">No team yet</div>
                           <div className="space-y-1">
-                            {noTeam.map((p: any) => (
-                              <div key={p.id} className="flex items-center gap-2">
-                                <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="xs" />
-                                <span className="text-sm text-gray-500">{p.profiles?.username ?? 'Unknown'}</span>
-                              </div>
-                            ))}
+                            {noTeam.map((p: any) => {
+                              const hasLocked = submittedPickUserIds.includes(p.user_id);
+                              return (
+                                <div key={p.id} className="flex items-center gap-2">
+                                  <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="xs" />
+                                  <span className="text-sm text-gray-500">{p.profiles?.username ?? 'Unknown'}</span>
+                                  {hasLocked && <span className="text-xs text-green-400 font-medium">✓ locked in</span>}
+                                </div>
+                              );
+                            })}
                           </div>
                         </CardBody>
                       </Card>

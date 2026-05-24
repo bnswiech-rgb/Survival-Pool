@@ -65,19 +65,19 @@ export function PoolDetailClient({
 
   // Refresh submitted pick user IDs every 30 seconds for team_battle pools
   useEffect(() => {
-    if (pool.contest_format !== 'team_battle' || !initialCurrentRound) return;
+    if (pool.contest_format !== 'team_battle') return;
     const refresh = async () => {
-      const { data } = await supabase
-        .from('picks')
-        .select('user_id')
-        .eq('round_id', initialCurrentRound.id);
-      if (data) setSubmittedIds(data.map((p: any) => p.user_id));
+      const res = await fetch(`/api/pools/${pool.id}/submitted-picks`);
+      if (res.ok) {
+        const data = await res.json();
+        setSubmittedIds(data.userIds ?? []);
+      }
     };
     refresh();
     const interval = setInterval(refresh, 30000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool.contest_format, initialCurrentRound?.id]);
+  }, [pool.contest_format, pool.id]);
 
   // Auto-fill invite code from URL param (e.g. ?joinTeam=XK9F2A)
   useEffect(() => {

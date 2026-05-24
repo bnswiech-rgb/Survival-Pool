@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { snapshot } from '@/lib/snapshot';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: poolId } = await params;
@@ -30,6 +31,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!roundsToDelete?.length) {
     return NextResponse.json({ error: 'No rounds found at or above that number' }, { status: 404 });
   }
+
+  await snapshot(supabase, user.id, 'delete-rounds', poolId);
 
   const roundIds = roundsToDelete.map((r: any) => r.id);
 

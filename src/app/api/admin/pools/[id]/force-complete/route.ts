@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { processRoundResults } from '@/lib/contest-engine';
 import type { PickStatus } from '@/types';
+import { snapshot } from '@/lib/snapshot';
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: poolId } = await params;
@@ -20,6 +21,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
   const { data: pool } = await supabase.from('pools').select('*').eq('id', poolId).single();
   if (!pool) return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
+
+  await snapshot(supabase, user.id, 'force-complete', poolId);
 
   // First: apply any open round's graded picks to participant stats
   const { data: openRounds } = await supabase

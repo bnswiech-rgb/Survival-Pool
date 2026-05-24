@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { processRoundResults } from '@/lib/contest-engine';
 import type { PickStatus } from '@/types';
+import { snapshot } from '@/lib/snapshot';
 
 export async function POST(request: NextRequest) {
   // Auth check with user client
@@ -24,6 +25,8 @@ export async function POST(request: NextRequest) {
   // Load pool
   const { data: pool } = await supabase.from('pools').select('*').eq('id', pool_id).single();
   if (!pool) return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
+
+  await snapshot(supabase, user.id, 'reset-round', pool_id);
 
   // Find the last COMPLETED round (the one that needs reprocessing)
   const { data: allRounds } = await supabase

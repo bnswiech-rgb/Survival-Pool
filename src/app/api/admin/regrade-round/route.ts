@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { snapshot } from '@/lib/snapshot';
 
 export async function POST(request: NextRequest) {
   const userSupabase = await createClient();
@@ -28,6 +29,8 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (!round) return NextResponse.json({ error: 'No completed round found' }, { status: 400 });
+
+  await snapshot(supabase, user.id, 'regrade-round', pool_id);
 
   // Reset all picks in that round to pending so cron regrads them
   await supabase

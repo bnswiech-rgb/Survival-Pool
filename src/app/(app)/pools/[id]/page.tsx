@@ -41,16 +41,28 @@ export default async function PoolDetailPage({ params }: Props) {
   // For team_battle pools, fetch user_ids who have submitted any pick this round
   // (just IDs — no pick details — so teammates can see who is locked in)
   let submittedPickUserIds: string[] = [];
-  if (pool?.contest_format === 'team_battle' && currentRound) {
+  if (pool?.contest_format === 'team_battle') {
     const serviceClient = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
-    const { data: submitted } = await serviceClient
-      .from('picks')
-      .select('user_id')
-      .eq('round_id', currentRound.id);
-    submittedPickUserIds = (submitted ?? []).map((p: any) => p.user_id);
+    // Get the latest non-completed round
+    const { data: activeRound } = await serviceClient
+      .from('rounds')
+      .select('id')
+      .eq('pool_id', id)
+      .neq('status', 'completed')
+      .order('round_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const roundId = activeRound?.id ?? currentRound?.id;
+    if (roundId) {
+      const { data: submitted } = await serviceClient
+        .from('picks')
+        .select('user_id')
+        .eq('round_id', roundId);
+      submittedPickUserIds = (submitted ?? []).map((p: any) => p.user_id);
+    }
   }
 
   // Fetch all graded picks from the current open round using service role

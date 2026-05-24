@@ -126,6 +126,14 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     else toast.success(`Merged ${data.merged} players, removed ${data.deleted} empty teams`);
   };
 
+  const reassignTeams = async (poolId: string, poolName: string) => {
+    if (!confirm(`Reassign ALL teams in "${poolName}" from scratch, ensuring no teammates share the same pick? This replaces all existing teams.`)) return;
+    const res = await fetch(`/api/admin/pools/${poolId}/reassign-teams`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) toast.error(data.error || 'Failed to reassign teams');
+    else toast.success(`Reassigned ${data.totalPlayers} players into ${data.teamsCreated} teams (no duplicate picks)`);
+  };
+
   const deleteRoundsFrom = async (poolId: string, poolName: string) => {
     const input = prompt(`Delete rounds from which number onward in "${poolName}"?\n(e.g. enter 7 to delete rounds 7, 8, 9... and reopen round 6)`);
     const from_round = parseInt(input ?? '');
@@ -249,6 +257,11 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                       {pool.contest_format === 'team_battle' && (
                         <Button size="sm" variant="secondary" onClick={() => mergeSmallTeams(pool.id, pool.name)}>
                           Merge Small Teams
+                        </Button>
+                      )}
+                      {pool.contest_format === 'team_battle' && (
+                        <Button size="sm" variant="secondary" onClick={() => reassignTeams(pool.id, pool.name)}>
+                          Reassign Teams
                         </Button>
                       )}
                       <Button size="sm" variant="danger" onClick={() => deleteRoundsFrom(pool.id, pool.name)}>

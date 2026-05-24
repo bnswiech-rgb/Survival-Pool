@@ -50,5 +50,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .eq('id', participant.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Track which team invite code was used
+  await supabase.from('activity_feed').insert({
+    pool_id: id,
+    user_id: user.id,
+    activity_type: 'joined_team',
+    metadata: { team_id: team.id, team_name: team.name, team_invite_code: invite_code.trim().toUpperCase() },
+  });
+
   return NextResponse.json({ team });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { snapshotTeams } from '@/lib/teamSnapshot';
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: poolId } = await params;
@@ -88,6 +89,9 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     // Team is valid — keep it
     validTeamIds.add(teamId);
   }
+
+  // Snapshot before any changes
+  await snapshotTeams(supabase, poolId, user.id, 'reassign-teams');
 
   if (toDissolve.length === 0) {
     return NextResponse.json({ teamsCreated: 0, kept: validTeamIds.size, dissolved: 0, message: 'All teams are already valid' });

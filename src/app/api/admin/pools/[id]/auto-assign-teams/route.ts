@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { snapshotTeams } from '@/lib/teamSnapshot';
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: poolId } = await params;
@@ -26,6 +27,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     .is('team_id', null);
 
   if (!solo?.length) return NextResponse.json({ teamsCreated: 0, assigned: 0, filled: 0, voided: 0 });
+
+  await snapshotTeams(supabase, poolId, user.id, 'auto-assign-teams');
 
   // Find which solo players have submitted a pick this round
   const { data: currentRound } = await supabase

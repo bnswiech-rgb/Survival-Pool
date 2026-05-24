@@ -126,6 +126,14 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     else toast.success(`Merged ${data.merged} players, removed ${data.deleted} empty teams`);
   };
 
+  const restoreTeams = async (poolId: string, poolName: string) => {
+    if (!confirm(`Restore "${poolName}" teams to the last snapshot? This will undo any team changes made since the snapshot.`)) return;
+    const res = await fetch(`/api/admin/pools/${poolId}/restore-teams`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) toast.error(data.error || 'Failed to restore teams');
+    else toast.success(`Restored ${data.teams} teams from snapshot at ${new Date(data.snapshotAt).toLocaleString()}`);
+  };
+
   const reassignTeams = async (poolId: string, poolName: string) => {
     if (!confirm(`Reassign ALL teams in "${poolName}" from scratch, ensuring no teammates share the same pick? This replaces all existing teams.`)) return;
     const res = await fetch(`/api/admin/pools/${poolId}/reassign-teams`, { method: 'POST' });
@@ -262,6 +270,11 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
                       {pool.contest_format === 'team_battle' && (
                         <Button size="sm" variant="secondary" onClick={() => reassignTeams(pool.id, pool.name)}>
                           Reassign Teams
+                        </Button>
+                      )}
+                      {pool.contest_format === 'team_battle' && (
+                        <Button size="sm" variant="secondary" onClick={() => restoreTeams(pool.id, pool.name)}>
+                          Restore Teams
                         </Button>
                       )}
                       <Button size="sm" variant="danger" onClick={() => deleteRoundsFrom(pool.id, pool.name)}>

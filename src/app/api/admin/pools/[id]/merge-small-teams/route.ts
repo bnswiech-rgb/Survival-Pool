@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { snapshotTeams } from '@/lib/teamSnapshot';
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: poolId } = await params;
@@ -26,6 +27,9 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     .not('team_id', 'is', null);
 
   if (!allParticipants?.length) return NextResponse.json({ merged: 0, deleted: 0 });
+
+  // Snapshot before modifying
+  await snapshotTeams(supabase, poolId, user.id, 'merge-small-teams');
 
   // Count members per team
   const teamMembers = new Map<string, string[]>(); // teamId -> participantIds[]

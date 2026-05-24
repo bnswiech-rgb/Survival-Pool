@@ -81,7 +81,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     pool_id: pool.id,
     user_id: user.id,
     activity_type: 'joined_pool',
-    metadata: { pool_name: pool.name },
+    metadata: { pool_name: pool.name, invite_code: code },
   });
 
   return NextResponse.json({ participant, poolId: pool.id }, { status: 201 });

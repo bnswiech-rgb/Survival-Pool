@@ -81,8 +81,9 @@ export async function POST(request: NextRequest) {
 
   // Create first round — deadline is 9:30 PM ET on the pool's start_date
   // (start_date is a date string like "2026-05-24"; map to 1:30 AM UTC the following day)
-  const startParts = start_date.split('-').map(Number); // [yyyy, mm, dd]
-  const firstRoundDeadline = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2] + 1, 1, 30, 0, 0));
+  const dateOnly = start_date.substring(0, 10); // always get YYYY-MM-DD regardless of timestamp format
+  const startParts = dateOnly.split('-').map(Number); // [yyyy, mm, dd]
+  const firstRoundDeadline = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2] + 1, 1, 30, 0, 0)); // 9:30 PM ET = 01:30 UTC next day
 
   await supabase.from('rounds').insert({
     pool_id: pool.id,

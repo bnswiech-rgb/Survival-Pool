@@ -99,34 +99,41 @@ export async function POST(request: NextRequest) {
     metadata: { pool_name: name },
   });
 
-  // Email all users about the new pool
-  try {
-    const { data: allUsers } = await supabase
-      .from('profiles')
-      .select('id')
-      .neq('id', user.id); // don't email the creator
+  // Email all users about the new pool (fire-and-forget, never block the response)
+  Promise.resolve().then(async () => {
+    try {
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+      const serviceSupabase = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      );
+      const { data: allUsers } = await serviceSupabase
+        .from('profiles')
+        .select('id')
+        .neq('id', user.id);
 
-    if (allUsers?.length) {
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      const userIds = new Set(allUsers.map((u: any) => u.id));
-      const emails = (authUsers?.users ?? [])
-        .filter((u: any) => userIds.has(u.id) && u.email)
-        .map((u: any) => u.email as string);
+      if (allUsers?.length) {
+        const { data: authUsers } = await serviceSupabase.auth.admin.listUsers();
+        const userIds = new Set(allUsers.map((u: any) => u.id));
+        const emails = (authUsers?.users ?? [])
+          .filter((u: any) => userIds.has(u.id) && u.email)
+          .map((u: any) => u.email as string);
 
-      await sendNewPoolEmail({
-        id: pool.id,
-        name: pool.name,
-        contest_format: pool.contest_format,
-        sport: pool.sport,
-        target_streak: pool.target_streak,
-        target_wins: pool.target_wins,
-        prize_description: body.prize_description,
-        entry_fee_cents: pool.entry_fee_cents,
-      }, emails);
+        await sendNewPoolEmail({
+          id: pool.id,
+          name: pool.name,
+          contest_format: pool.contest_format,
+          sport: pool.sport,
+          target_streak: pool.target_streak,
+          target_wins: pool.target_wins,
+          prize_description: body.prize_description,
+          entry_fee_cents: pool.entry_fee_cents,
+        }, emails);
+      }
+    } catch (e) {
+      console.error('Failed to send new pool emails:', e);
     }
-  } catch (e) {
-    console.error('Failed to send new pool emails:', e);
-  }
+  });
 
   return NextResponse.json({ pool }, { status: 201 });
 }

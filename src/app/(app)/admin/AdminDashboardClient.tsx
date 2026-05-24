@@ -115,7 +115,7 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     const res = await fetch(`/api/admin/pools/${poolId}/auto-assign-teams`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) toast.error(data.error || 'Failed to assign teams');
-    else toast.success(`Created ${data.teamsCreated} teams, assigned ${data.assigned} players`);
+    else toast.success(`Created ${data.teamsCreated} teams, assigned ${data.assigned} players${data.voided ? `, removed ${data.voided} (couldn't form full team)` : ''}`);
   };
 
   const deleteRoundsFrom = async (poolId: string, poolName: string) => {

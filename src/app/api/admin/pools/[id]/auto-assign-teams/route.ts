@@ -66,9 +66,15 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     if (!error) filled += toAssign.length;
   }
 
-  // Step 2: Create new teams from remaining solo players
-  for (let i = 0; i < queue.length; i += teamSize) {
-    const members = queue.slice(i, i + teamSize);
+  // Step 2: Create new full teams from remaining solo players
+  // Any leftover players that can't form a complete team get removed from the pool
+  const fullTeamCount = Math.floor(queue.length / teamSize);
+  const leftoverStart = fullTeamCount * teamSize;
+  const leftovers = queue.slice(leftoverStart); // players that can't form a complete team
+  const toGroup = queue.slice(0, leftoverStart);
+
+  for (let i = 0; i < toGroup.length; i += teamSize) {
+    const members = toGroup.slice(i, i + teamSize);
     const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const teamName = `Team ${teamsCreated + 1}`;
 
@@ -91,5 +97,16 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     }
   }
 
-  return NextResponse.json({ teamsCreated, assigned, filled });
+  // Remove leftover players who couldn't form a complete team
+  let voided = 0;
+  if (leftovers.length > 0) {
+    const { error: voidError } = await supabase
+      .from('pool_participants')
+      .delete()
+      .in('id', leftovers.map(m => m.id));
+
+    if (!voidError) voided = leftovers.length;
+  }
+
+  return NextResponse.json({ teamsCreated, assigned, filled, voided });
 }

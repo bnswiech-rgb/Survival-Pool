@@ -23,11 +23,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (body.deadline) {
     newDeadline = new Date(body.deadline).toISOString();
   } else {
-    // Default: tonight at 9:30 PM ET = 1:30 AM UTC next day
-    const d = new Date();
-    d.setUTCHours(1, 30, 0, 0);
-    d.setUTCDate(d.getUTCDate() + 1);
-    newDeadline = d.toISOString();
+    // 9:30 PM ET = 01:30 UTC next calendar day
+    // Get today's date in ET (UTC-4 EDT / UTC-5 CDT) — use UTC-4 as conservative EDT
+    const nowET = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    const y = nowET.getUTCFullYear();
+    const m = nowET.getUTCMonth();
+    const day = nowET.getUTCDate();
+    // 9:30 PM ET on today's ET date = 01:30 UTC the following UTC day
+    newDeadline = new Date(Date.UTC(y, m, day + 1, 1, 30, 0, 0)).toISOString();
   }
 
   // Find the latest round for this pool (any status)

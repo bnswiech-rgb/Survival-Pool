@@ -60,7 +60,24 @@ export function PoolDetailClient({
   const [teamName, setTeamName] = useState('');
   const [teamCode, setTeamCode] = useState('');
   const [teamLoading, setTeamLoading] = useState(false);
+  const [submittedIds, setSubmittedIds] = useState<string[]>(submittedPickUserIds);
   const supabase = createClient();
+
+  // Refresh submitted pick user IDs every 30 seconds for team_battle pools
+  useEffect(() => {
+    if (pool.contest_format !== 'team_battle' || !initialCurrentRound) return;
+    const refresh = async () => {
+      const { data } = await supabase
+        .from('picks')
+        .select('user_id')
+        .eq('round_id', initialCurrentRound.id);
+      if (data) setSubmittedIds(data.map((p: any) => p.user_id));
+    };
+    refresh();
+    const interval = setInterval(refresh, 30000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool.contest_format, initialCurrentRound?.id]);
 
   // Auto-fill invite code from URL param (e.g. ?joinTeam=XK9F2A)
   useEffect(() => {
@@ -763,7 +780,7 @@ export function PoolDetailClient({
                           <div className="ml-9 space-y-1">
                             {members.map((m: any) => {
                               const pick = picksVisible ? pickByUser[m.user_id] : null;
-                              const hasLocked = submittedPickUserIds.includes(m.user_id);
+                              const hasLocked = submittedIds.includes(m.user_id);
                               return (
                                 <div key={m.id} className="flex items-center gap-2">
                                   <Avatar src={m.profiles?.avatar_url} username={m.profiles?.username ?? '?'} size="xs" />
@@ -797,7 +814,7 @@ export function PoolDetailClient({
                           <div className="text-xs text-gray-500 mb-2">No team yet</div>
                           <div className="space-y-1">
                             {noTeam.map((p: any) => {
-                              const hasLocked = submittedPickUserIds.includes(p.user_id);
+                              const hasLocked = submittedIds.includes(p.user_id);
                               return (
                                 <div key={p.id} className="flex items-center gap-2">
                                   <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="xs" />

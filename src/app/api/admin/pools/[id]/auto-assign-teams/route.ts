@@ -18,23 +18,57 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const { data: pool } = await supabase.from('pools').select('team_size').eq('id', poolId).single();
   const teamSize = pool?.team_size ?? 3;
 
-  // Get all participants without a team
+  // Get all participants without a team (solo players to assign)
   const { data: solo } = await supabase
     .from('pool_participants')
     .select('id, user_id')
     .eq('pool_id', poolId)
     .is('team_id', null);
 
-  if (!solo?.length) return NextResponse.json({ teamsCreated: 0, assigned: 0 });
+  if (!solo?.length) return NextResponse.json({ teamsCreated: 0, assigned: 0, filled: 0 });
 
-  // Shuffle randomly
-  const shuffled = [...solo].sort(() => Math.random() - 0.5);
+  // Find incomplete teams (have members but fewer than teamSize)
+  const { data: allParticipants } = await supabase
+    .from('pool_participants')
+    .select('id, team_id')
+    .eq('pool_id', poolId)
+    .not('team_id', 'is', null);
 
+  // Count members per team
+  const teamMemberCount = new Map<string, number>();
+  for (const p of allParticipants ?? []) {
+    teamMemberCount.set(p.team_id, (teamMemberCount.get(p.team_id) ?? 0) + 1);
+  }
+
+  // Teams that need more members, sorted by most members first (fill biggest gaps last)
+  const incompleteTeams = [...teamMemberCount.entries()]
+    .filter(([, count]) => count < teamSize)
+    .sort((a, b) => b[1] - a[1]); // most members first so nearly-full teams get filled first
+
+  // Shuffle solo players
+  const queue = [...solo].sort(() => Math.random() - 0.5);
+
+  let filled = 0;
   let teamsCreated = 0;
   let assigned = 0;
 
-  for (let i = 0; i < shuffled.length; i += teamSize) {
-    const members = shuffled.slice(i, i + teamSize);
+  // Step 1: Fill incomplete teams
+  for (const [teamId, currentCount] of incompleteTeams) {
+    const spotsNeeded = teamSize - currentCount;
+    const toAssign = queue.splice(0, spotsNeeded);
+    if (!toAssign.length) break;
+
+    const { error } = await supabase
+      .from('pool_participants')
+      .update({ team_id: teamId })
+      .in('id', toAssign.map(m => m.id));
+
+    if (!error) filled += toAssign.length;
+  }
+
+  // Step 2: Create new teams from remaining solo players
+  for (let i = 0; i < queue.length; i += teamSize) {
+    const members = queue.slice(i, i + teamSize);
     const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const teamName = `Team ${teamsCreated + 1}`;
 
@@ -57,5 +91,5 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     }
   }
 
-  return NextResponse.json({ teamsCreated, assigned });
+  return NextResponse.json({ teamsCreated, assigned, filled });
 }

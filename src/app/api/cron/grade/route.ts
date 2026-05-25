@@ -452,6 +452,12 @@ export async function GET(request: NextRequest) {
       .eq('round_id', roundId)
       .neq('status', 'pending');
 
+    // If no picks submitted yet and deadline hasn't passed, don't advance
+    if ((!picks || picks.length === 0) && !roundDeadlinePassed) {
+      await supabase.from('rounds').update({ status: 'open' }).eq('id', roundId);
+      continue;
+    }
+
     // Get active participants
     const { data: participants } = await supabase
       .from('pool_participants')
@@ -501,6 +507,13 @@ export async function GET(request: NextRequest) {
         const participantId = userToParticipantId.get(pick.user_id);
         if (participantId) picksMap.set(participantId, pick.status as PickStatus);
       }
+    }
+
+    // Safety: if picks exist in DB but none mapped to active participants, skip this round
+    if ((picks?.length ?? 0) > 0 && picksMap.size === 0 && pool.contest_format !== 'team_battle') {
+      console.error(`[advance] round ${roundId}: ${picks!.length} picks in DB but picksMap is empty — skipping to avoid data corruption`);
+      await supabase.from('rounds').update({ status: 'open' }).eq('id', roundId);
+      continue;
     }
 
     console.log(`[advance] picksMap size: ${picksMap.size}, sample:`, JSON.stringify([...picksMap.entries()].slice(0,3)));

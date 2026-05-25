@@ -138,6 +138,10 @@ export async function POST(_request: NextRequest) {
       .eq('round_id', roundId)
       .neq('status', 'pending');
 
+    // If no picks submitted yet and deadline hasn't passed, skip this round
+    const roundDeadlinePassed = new Date(round.deadline) < new Date();
+    if ((!picks || picks.length === 0) && !roundDeadlinePassed) continue;
+
     const { data: participants } = await supabase
       .from('pool_participants')
       .select('*')
@@ -174,6 +178,12 @@ export async function POST(_request: NextRequest) {
         const participantId = userToParticipantId.get(pick.user_id);
         if (participantId) picksMap.set(participantId, pick.status as PickStatus);
       }
+    }
+
+    // Safety: if picks exist but none mapped, skip to avoid corrupting data
+    if ((picks?.length ?? 0) > 0 && picksMap.size === 0 && pool.contest_format !== 'team_battle') {
+      console.error(`[run-grader] round ${roundId}: picks exist but picksMap empty — skipping`);
+      continue;
     }
 
     const effectiveFormat = pool.contest_format === 'team_battle' && pool.team_scoring

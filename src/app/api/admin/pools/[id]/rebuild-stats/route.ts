@@ -63,6 +63,9 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       .eq('round_id', round.id)
       .neq('status', 'pending');
 
+    // Skip rounds with no picks — data corruption guard
+    if (!picks || picks.length === 0) { roundsProcessed++; continue; }
+
     const userToParticipantId = new Map<string, string>();
     for (const p of participants) userToParticipantId.set(p.user_id, p.id);
 
@@ -93,6 +96,9 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
         if (pid) picksMap.set(pid, pick.status as PickStatus);
       }
     }
+
+    // Safety: if picks exist but none mapped, skip this round
+    if (picks.length > 0 && picksMap.size === 0) { roundsProcessed++; continue; }
 
     const effectiveFormat = pool.contest_format === 'team_battle' && pool.team_scoring
       ? pool.team_scoring : pool.contest_format;

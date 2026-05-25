@@ -942,65 +942,122 @@ export function PoolDetailClient({
                     </div>
                   </CardHeader>
                   <CardBody className="space-y-3">
-                    {/* User's own pick highlighted */}
-                    {histMyPick ? (
-                      <div className={`rounded-lg px-3 py-2 border ${
-                        histMyPick.status === 'won' ? 'bg-green-500/10 border-green-500/30' :
-                        histMyPick.status === 'lost' ? 'bg-red-500/10 border-red-500/30' :
-                        histMyPick.status === 'push' ? 'bg-blue-500/10 border-blue-500/30' :
-                        'bg-gray-800 border-gray-700'
-                      }`}>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-gray-400 mb-0.5">Your Pick</p>
-                            <p className="text-white font-bold text-sm">{pickLabel(histMyPick)}</p>
-                            <p className="text-xs text-gray-500 truncate">{histMyPick.game}</p>
+                    {pool.contest_format === 'team_battle' ? (() => {
+                      // Group picks by team
+                      const pickByUser: Record<string, any> = Object.fromEntries(histAllPicks.map((p: any) => [p.user_id, p]));
+                      const teamMap: Record<string, { team: any; members: any[] }> = {};
+                      for (const p of participants) {
+                        const tid = (p as any).team_id ?? 'none';
+                        if (!teamMap[tid]) {
+                          const team = initialAllTeams.find((t: any) => t.id === tid) ?? null;
+                          teamMap[tid] = { team, members: [] };
+                        }
+                        teamMap[tid].members.push(p);
+                      }
+                      return Object.entries(teamMap).map(([tid, { team, members }]) => {
+                        const memberPicks = members.map((m: any) => pickByUser[m.user_id]).filter(Boolean);
+                        const teamWon = memberPicks.length > 0 && memberPicks.every((p: any) => p.status === 'won');
+                        const teamLost = memberPicks.some((p: any) => p.status === 'lost');
+                        const teamResult = teamWon ? 'won' : teamLost ? 'lost' : memberPicks.length > 0 ? 'push' : null;
+                        const isMyTeam = myTeam && myTeam.id === tid;
+                        return (
+                          <div key={tid} className={`rounded-lg border px-3 py-2 ${
+                            isMyTeam ? 'border-purple-500/40 bg-purple-500/5' : 'border-gray-700 bg-gray-800/40'
+                          }`}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-sm font-bold text-white">
+                                {team?.name ?? 'No Team'}{isMyTeam ? ' (Your Team)' : ''}
+                              </span>
+                              {teamResult && (
+                                <Badge variant={teamResult === 'won' ? 'green' : teamResult === 'lost' ? 'red' : 'blue'}>
+                                  {teamResult === 'won' ? 'WIN' : teamResult === 'lost' ? 'LOSS' : 'PUSH'}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              {members.map((m: any) => {
+                                const pick = pickByUser[m.user_id];
+                                return (
+                                  <div key={m.id} className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-xs text-gray-400 truncate">{(m as any).profiles?.username ?? 'Unknown'}</span>
+                                      {pick && <span className="text-xs text-gray-500 truncate">{pickLabel(pick)}</span>}
+                                    </div>
+                                    {pick ? (
+                                      <Badge variant={pick.status === 'won' ? 'green' : pick.status === 'lost' ? 'red' : pick.status === 'push' ? 'blue' : 'gray'} className="flex-shrink-0 text-xs">
+                                        {pick.status.toUpperCase()}
+                                      </Badge>
+                                    ) : <span className="text-xs text-gray-600">no pick</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <Badge variant={
-                            histMyPick.status === 'won' ? 'green' :
-                            histMyPick.status === 'lost' ? 'red' :
-                            histMyPick.status === 'push' ? 'blue' : 'gray'
-                          }>
-                            {histMyPick.status.toUpperCase()}
-                          </Badge>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg px-3 py-2 bg-gray-800/50 border border-gray-700">
-                        <p className="text-xs text-gray-500">You did not submit a pick this round</p>
-                      </div>
-                    )}
-
-                    {/* Everyone else's picks (collapsed, show count + expand) */}
-                    {histAllPicks.length > 0 && (
-                      <details className="group">
-                        <summary className="text-xs text-gray-400 cursor-pointer hover:text-white list-none flex items-center gap-1">
-                          <span className="group-open:hidden">▶</span>
-                          <span className="hidden group-open:inline">▼</span>
-                          Show all {histAllPicks.length} picks this round
-                        </summary>
-                        <div className="mt-2 space-y-1.5">
-                          {histAllPicks.map((pick: any) => (
-                            <div key={pick.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-gray-800/40">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-xs font-medium text-gray-300 truncate">
-                                  {pick.profiles?.username ?? 'Unknown'}
-                                </span>
-                                <span className="text-xs text-gray-500 truncate">
-                                  {pickLabel(pick)}
-                                </span>
+                        );
+                      });
+                    })() : (
+                      <>
+                        {/* User's own pick highlighted */}
+                        {histMyPick ? (
+                          <div className={`rounded-lg px-3 py-2 border ${
+                            histMyPick.status === 'won' ? 'bg-green-500/10 border-green-500/30' :
+                            histMyPick.status === 'lost' ? 'bg-red-500/10 border-red-500/30' :
+                            histMyPick.status === 'push' ? 'bg-blue-500/10 border-blue-500/30' :
+                            'bg-gray-800 border-gray-700'
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-gray-400 mb-0.5">Your Pick</p>
+                                <p className="text-white font-bold text-sm">{pickLabel(histMyPick)}</p>
+                                <p className="text-xs text-gray-500 truncate">{histMyPick.game}</p>
                               </div>
                               <Badge variant={
-                                pick.status === 'won' ? 'green' :
-                                pick.status === 'lost' ? 'red' :
-                                pick.status === 'push' ? 'blue' : 'gray'
-                              } className="flex-shrink-0 text-xs">
-                                {pick.status.toUpperCase()}
+                                histMyPick.status === 'won' ? 'green' :
+                                histMyPick.status === 'lost' ? 'red' :
+                                histMyPick.status === 'push' ? 'blue' : 'gray'
+                              }>
+                                {histMyPick.status.toUpperCase()}
                               </Badge>
                             </div>
-                          ))}
-                        </div>
-                      </details>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg px-3 py-2 bg-gray-800/50 border border-gray-700">
+                            <p className="text-xs text-gray-500">You did not submit a pick this round</p>
+                          </div>
+                        )}
+
+                        {/* Everyone else's picks */}
+                        {histAllPicks.length > 0 && (
+                          <details className="group">
+                            <summary className="text-xs text-gray-400 cursor-pointer hover:text-white list-none flex items-center gap-1">
+                              <span className="group-open:hidden">▶</span>
+                              <span className="hidden group-open:inline">▼</span>
+                              Show all {histAllPicks.length} picks this round
+                            </summary>
+                            <div className="mt-2 space-y-1.5">
+                              {histAllPicks.map((pick: any) => (
+                                <div key={pick.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-gray-800/40">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-xs font-medium text-gray-300 truncate">
+                                      {pick.profiles?.username ?? 'Unknown'}
+                                    </span>
+                                    <span className="text-xs text-gray-500 truncate">
+                                      {pickLabel(pick)}
+                                    </span>
+                                  </div>
+                                  <Badge variant={
+                                    pick.status === 'won' ? 'green' :
+                                    pick.status === 'lost' ? 'red' :
+                                    pick.status === 'push' ? 'blue' : 'gray'
+                                  } className="flex-shrink-0 text-xs">
+                                    {pick.status.toUpperCase()}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </>
                     )}
                   </CardBody>
                 </Card>

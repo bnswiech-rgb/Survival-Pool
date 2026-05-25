@@ -192,6 +192,42 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (alive.length <= 1 || winners.length > 0) {
     await supabase.from('pools').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', id);
+
+    // Distribute sweeps coin prize pool to winner(s) if coins entry fee was set
+    if ((pool.entry_fee_coins ?? 0) > 0) {
+      const { count: totalParticipants } = await supabase
+        .from('pool_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('pool_id', id);
+      const gross = (totalParticipants ?? 0) * pool.entry_fee_coins;
+      const rake = Math.round(gross * ((pool.rake_percentage ?? 10) / 100));
+      const prize = gross - rake;
+      const winnerParticipants = [...(remaining ?? [])].filter((p: any) => p.status === 'winner');
+      const numWinners = Math.max(1, winnerParticipants.length);
+      const prizeEach = Math.floor(prize / numWinners);
+      if (prizeEach > 0) {
+        for (const winner of winnerParticipants) {
+          const { data: winnerProfile } = await supabase
+            .from('profiles')
+            .select('sweeps_coins')
+            .eq('id', winner.user_id)
+            .single();
+          if (winnerProfile) {
+            await supabase.from('profiles').update({
+              sweeps_coins: (winnerProfile.sweeps_coins ?? 0) + prizeEach,
+            }).eq('id', winner.user_id);
+            await supabase.from('coin_transactions').insert({
+              user_id: winner.user_id,
+              gold_delta: 0,
+              sweeps_delta: prizeEach,
+              transaction_type: 'pool_win',
+              pool_id: id,
+              note: `Won: ${pool.name}`,
+            });
+          }
+        }
+      }
+    }
   } else {
     if (pool.status === 'open' && pool.contest_format !== 'streak_race') {
       await supabase.from('pools').update({ status: 'active' }).eq('id', id);

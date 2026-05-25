@@ -420,12 +420,29 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    // After deadline, force all remaining pending picks regardless of game start time
+    // After deadline, only force-grade picks for games that started 3+ hours ago
+    // (same cutoff as ESPN grading above — game should be finished by then)
     if (stillPending && stillPending.length > 0 && roundDeadlinePassed) {
-      await supabase
-        .from('picks')
-        .update({ status: pool.contest_format === 'streak_race' ? 'push' : 'lost' })
-        .in('id', (stillPending as any[]).map((p: any) => p.id));
+      const gameCutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+      const picksToForce = (stillPending as any[]).filter(
+        (p: any) => !p.game_start_time || p.game_start_time < gameCutoff,
+      );
+      const picksStillLive = (stillPending as any[]).filter(
+        (p: any) => p.game_start_time && p.game_start_time >= gameCutoff,
+      );
+
+      if (picksToForce.length > 0) {
+        await supabase
+          .from('picks')
+          .update({ status: pool.contest_format === 'streak_race' ? 'push' : 'lost' })
+          .in('id', picksToForce.map((p: any) => p.id));
+      }
+
+      // If any games might still be live, don't advance the round yet — wait for next cron run
+      if (picksStillLive.length > 0) {
+        await supabase.from('rounds').update({ status: 'open' }).eq('id', roundId);
+        continue;
+      }
     }
 
     // Get all graded picks for this round

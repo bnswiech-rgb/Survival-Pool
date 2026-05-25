@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { formatDistanceToNow } from 'date-fns';
@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { Shield } from 'lucide-react';
 import Link from 'next/link';
 
-const TABS = ['Pools', 'Grade Picks', 'Actions Log'];
+const TABS = ['Pools', 'Grade Picks', 'Users & Coins', 'Actions Log'];
 
 interface Props {
   pools: any[];
@@ -26,11 +26,11 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
   const runAutoGrade = async () => {
     setAutoGrading(true);
     try {
-      const res = await fetch('/api/cron/grade');
+      const res = await fetch('/api/admin/run-grader', { method: 'POST' });
       let data: any = {};
       try { data = await res.json(); } catch { data = {}; }
       if (!res.ok || data.error) toast.error(data.error || `HTTP ${res.status}`);
-      else toast.success(`Graded ${data.graded ?? 0} picks, advanced ${data.advancedRounds ?? 0} rounds`);
+      else toast.success(`Advanced ${data.advancedRounds ?? 0} rounds`);
     } catch (e: any) {
       toast.error(e?.message || 'Failed to run grader');
     }
@@ -154,6 +154,40 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     const data = await res.json();
     if (!res.ok) toast.error(data.error || 'Failed to delete rounds');
     else toast.success(`Deleted rounds ${data.deleted.join(', ')} — round ${data.reopened} reopened`);
+  };
+
+  // Coin grant state
+  const [grantUsername, setGrantUsername] = useState('');
+  const [grantGold, setGrantGold] = useState('');
+  const [grantSweeps, setGrantSweeps] = useState('');
+  const [grantNote, setGrantNote] = useState('');
+  const [granting, setGranting] = useState(false);
+
+  const grantCoins = async () => {
+    if (!grantUsername.trim()) { toast.error('Enter a username'); return; }
+    if (!grantGold && !grantSweeps) { toast.error('Enter at least one coin amount'); return; }
+    setGranting(true);
+    try {
+      const res = await fetch('/api/admin/grant-coins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: grantUsername.trim(),
+          gold_delta: parseInt(grantGold) || 0,
+          sweeps_delta: parseInt(grantSweeps) || 0,
+          note: grantNote.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) toast.error(data.error || 'Failed to grant coins');
+      else {
+        toast.success(`Granted to ${data.username} — ${data.new_gold.toLocaleString()} GC, ${data.new_sweeps.toLocaleString()} SC`);
+        setGrantUsername(''); setGrantGold(''); setGrantSweeps(''); setGrantNote('');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Error');
+    }
+    setGranting(false);
   };
 
   const forceComplete = async (poolId: string, poolName: string) => {
@@ -346,6 +380,60 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
               </Card>
             ))
           )}
+        </div>
+      )}
+
+      {/* Users & Coins Tab */}
+      {activeTab === 'Users & Coins' && (
+        <div className="space-y-6">
+          <Card>
+            <CardBody className="space-y-4">
+              <h3 className="font-bold text-white">Grant Coins to User</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-400 uppercase tracking-wide">Username</label>
+                  <input
+                    placeholder="exactusername"
+                    value={grantUsername}
+                    onChange={e => setGrantUsername(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-400 uppercase tracking-wide">Note (optional)</label>
+                  <input
+                    placeholder="Reason for grant…"
+                    value={grantNote}
+                    onChange={e => setGrantNote(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-yellow-400 uppercase tracking-wide">Gold Coins (GC)</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={grantGold}
+                    onChange={e => setGrantGold(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-green-400 uppercase tracking-wide">Sweeps Coins (SC)</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={grantSweeps}
+                    onChange={e => setGrantSweeps(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+              <Button onClick={grantCoins} loading={granting} variant="primary">
+                Grant Coins
+              </Button>
+            </CardBody>
+          </Card>
         </div>
       )}
 

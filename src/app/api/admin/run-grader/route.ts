@@ -161,7 +161,7 @@ export async function POST(_request: NextRequest) {
       const pickByUser = new Map<string, PickStatus>();
       for (const pick of picks ?? []) pickByUser.set(pick.user_id, pick.status as PickStatus);
       for (const [, members] of teamGroups) {
-        const statuses = members.map((m: any) => pickByUser.get(m.user_id) ?? 'push');
+        const statuses = members.map((m: any) => pickByUser.get(m.user_id) ?? 'lost');
         const teamResult: PickStatus = statuses.some(s => s === 'lost') ? 'lost'
           : statuses.every(s => s === 'won') ? 'won' : 'push';
         for (const m of members) {

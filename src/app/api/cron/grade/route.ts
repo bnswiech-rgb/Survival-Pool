@@ -486,8 +486,8 @@ export async function GET(request: NextRequest) {
       for (const pick of picks ?? []) pickByUser.set(pick.user_id, pick.status as PickStatus);
 
       for (const [, members] of teamGroups) {
-        const statuses = members.map((m: any) => pickByUser.get(m.user_id) ?? 'push');
-        // Parlay: any loss = team loss; all wins = team win; otherwise push
+        const statuses = members.map((m: any) => pickByUser.get(m.user_id) ?? 'lost');
+        // Parlay: any loss (including no pick) = team loss; all wins = team win; otherwise push
         const teamResult: PickStatus = statuses.some(s => s === 'lost') ? 'lost'
           : statuses.every(s => s === 'won') ? 'won'
           : 'push';

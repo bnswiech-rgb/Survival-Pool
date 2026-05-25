@@ -147,8 +147,8 @@ export default async function DashboardPage() {
                               return <div className={`text-sm font-semibold ${color}`}>{label}</div>;
                             })()
                           ) : (
-                            <div className="text-sm font-semibold text-green-400">
-                              {p.status === 'advanced' ? '✅ Advanced' : '✅ Alive'}
+                            <div className={`text-sm font-semibold ${pool.status === 'completed' ? 'text-gray-400' : 'text-green-400'}`}>
+                              {pool.status === 'completed' ? '🏁 Concluded' : p.status === 'advanced' ? '✅ Advanced' : '✅ Alive'}
                             </div>
                           )}
                           {pool.contest_format === 'lives' && (

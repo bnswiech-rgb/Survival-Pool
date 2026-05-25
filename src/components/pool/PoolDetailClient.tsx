@@ -340,7 +340,7 @@ export function PoolDetailClient({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-bold text-white">
-                {myParticipation.status === 'eliminated' ? '💀 Eliminated' : '🟢 Alive'}
+                {myParticipation.status === 'eliminated' ? '💀 Eliminated' : pool.status === 'completed' ? '🏁 Concluded' : '🟢 Alive'}
               </span>
               {isStreakRace ? (() => {
                 const s = (myParticipation as any).current_streak ?? 0;

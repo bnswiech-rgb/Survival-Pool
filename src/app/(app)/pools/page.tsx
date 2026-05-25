@@ -66,7 +66,7 @@ export default async function PoolsPage({ searchParams }: Props) {
   const enrichedPools = pools?.map((p: any) => {
     const participants = p.pool_participants ?? [];
     const participant_count = participants.length;
-    const alive_count = participants.filter((pp: any) => pp.status === 'active' || pp.status === 'advanced').length;
+    const alive_count = p.status === 'completed' ? 0 : participants.filter((pp: any) => pp.status === 'active' || pp.status === 'advanced').length;
     const pickByUser = gradedPicksByPool[p.id] ?? {};
     const projectedStreak = (pp: any) => {
       const stored = pp.current_streak ?? 0;
@@ -83,7 +83,7 @@ export default async function PoolsPage({ searchParams }: Props) {
     const team_count = p.contest_format === 'team_battle'
       ? new Set(participants.map((pp: any) => pp.team_id).filter(Boolean)).size
       : null;
-    const alive_team_count = p.contest_format === 'team_battle'
+    const alive_team_count = p.contest_format === 'team_battle' && p.status !== 'completed'
       ? new Set(participants.filter((pp: any) => pp.status === 'active' || pp.status === 'advanced').map((pp: any) => pp.team_id).filter(Boolean)).size
       : null;
     return { ...p, participant_count, alive_count, leader_streak, leaders_count, winner_username, team_count, alive_team_count };

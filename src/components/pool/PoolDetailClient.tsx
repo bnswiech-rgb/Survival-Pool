@@ -955,10 +955,11 @@ export function PoolDetailClient({
                         teamMap[tid].members.push(p);
                       }
                       return Object.entries(teamMap).map(([tid, { team, members }]) => {
-                        const memberPicks = members.map((m: any) => pickByUser[m.user_id]).filter(Boolean);
-                        const teamWon = memberPicks.length > 0 && memberPicks.every((p: any) => p.status === 'won');
-                        const teamLost = memberPicks.some((p: any) => p.status === 'lost');
-                        const teamResult = teamWon ? 'won' : teamLost ? 'lost' : memberPicks.length > 0 ? 'push' : null;
+                        const memberPicks = members.map((m: any) => pickByUser[m.user_id] ?? null);
+                        const anyMissing = memberPicks.some((p: any) => p === null);
+                        const anyLost = memberPicks.some((p: any) => p?.status === 'lost');
+                        const allWon = memberPicks.every((p: any) => p?.status === 'won');
+                        const teamResult = (anyLost || anyMissing) ? 'lost' : allWon ? 'won' : memberPicks.some(Boolean) ? 'push' : null;
                         const isMyTeam = myTeam && myTeam.id === tid;
                         return (
                           <div key={tid} className={`rounded-lg border px-3 py-2 ${

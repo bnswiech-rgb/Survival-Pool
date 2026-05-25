@@ -560,14 +560,42 @@ export function PoolDetailClient({
             </Card>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                { label: 'Entries', value: participants.length, icon: Users },
-                { label: 'Alive', value: aliveCount, icon: Zap },
-                { label: 'Eliminated', value: eliminatedCount, icon: Target },
-                isStreakRace
-                  ? { label: 'Target', value: `${pool.target_streak}W`, icon: Trophy }
-                  : { label: 'Round', value: latestRoundNumber, icon: Trophy },
-              ].map(s => (
+              {(() => {
+                const isTeamBattle = pool.contest_format === 'team_battle';
+                let secondStat: { label: string; value: string | number; icon: any };
+                if (isTeamBattle) {
+                  // Group participants by team, find the leader record
+                  const teamGroups: Record<string, any[]> = {};
+                  for (const p of participants) {
+                    const tid = (p as any).team_id ?? 'none';
+                    if (!teamGroups[tid]) teamGroups[tid] = [];
+                    teamGroups[tid].push(p);
+                  }
+                  const totalTeams = Object.keys(teamGroups).length;
+                  // Rep = first member of each team (all members share same W/L after rebuild)
+                  const teamRecords = Object.values(teamGroups).map(members => ({
+                    wins: members[0].wins ?? 0,
+                    losses: members[0].losses ?? 0,
+                  }));
+                  const maxWins = Math.max(...teamRecords.map(t => t.wins), 0);
+                  const leaders = teamRecords.filter(t => t.wins === maxWins);
+                  const leaderLosses = leaders[0]?.losses ?? 0;
+                  const label = leaders.length === totalTeams
+                    ? `${leaders.length} teams tied ${maxWins}W`
+                    : `${leaders.length} team${leaders.length !== 1 ? 's' : ''} lead ${maxWins}W-${leaderLosses}L`;
+                  secondStat = { label: 'Leading', value: label, icon: Zap };
+                } else {
+                  secondStat = { label: 'Alive', value: aliveCount, icon: Zap };
+                }
+                return [
+                  { label: isTeamBattle ? 'Teams' : 'Entries', value: isTeamBattle ? Object.keys((() => { const g: Record<string,any[]> = {}; for (const p of participants) { const t = (p as any).team_id ?? 'none'; if (!g[t]) g[t]=[]; g[t].push(p); } return g; })()).length : participants.length, icon: Users },
+                  secondStat,
+                  { label: isTeamBattle ? 'Players' : 'Eliminated', value: isTeamBattle ? participants.length : eliminatedCount, icon: Target },
+                  isStreakRace
+                    ? { label: 'Target', value: `${pool.target_streak}W`, icon: Trophy }
+                    : { label: 'Round', value: latestRoundNumber, icon: Trophy },
+                ];
+              })().map(s => (
                 <Card key={s.label}>
                   <CardBody className="text-center py-3">
                     <div className="text-2xl font-black text-white">{s.value}</div>

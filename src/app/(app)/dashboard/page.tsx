@@ -55,8 +55,8 @@ export default async function DashboardPage() {
     if (!pickByPool[pk.pool_id]) pickByPool[pk.pool_id] = pk;
   }
 
-  const activeParticipations = (myParticipations ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status));
-  const finishedParticipations = (myParticipations ?? []).filter((p: any) => ['eliminated', 'winner'].includes(p.status));
+  const activeParticipations = (myParticipations ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status) && p.pools?.status !== 'completed');
+  const finishedParticipations = (myParticipations ?? []).filter((p: any) => ['eliminated', 'winner'].includes(p.status) || p.pools?.status === 'completed');
 
   const stats = [
     { label: 'Active Contests', value: activeParticipations.length, icon: Target, color: 'text-blue-400' },

@@ -125,7 +125,7 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
                   const leaders = (pool as any).teams_at_leader ?? total;
                   const lw = (pool as any).team_leader_wins ?? 0;
                   const ll = (pool as any).team_leader_losses ?? 0;
-                  if (leaders === total) return <><span className="text-white font-bold">{total}</span> teams tied {lw}W-{ll}L</>;
+                  if (leaders === total) return <><span className="text-white font-bold">{total}</span> teams tied {lw}W</>;
                   return <><span className="text-white font-bold">{leaders}</span> team{leaders !== 1 ? 's' : ''} lead {lw}W-{ll}L</>;
                 })()}
               </span>

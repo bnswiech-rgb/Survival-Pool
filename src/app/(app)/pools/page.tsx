@@ -86,7 +86,22 @@ export default async function PoolsPage({ searchParams }: Props) {
     const alive_team_count = p.contest_format === 'team_battle' && p.status !== 'completed'
       ? new Set(participants.filter((pp: any) => pp.status === 'active' || pp.status === 'advanced').map((pp: any) => pp.team_id).filter(Boolean)).size
       : null;
-    return { ...p, participant_count, alive_count, leader_streak, leaders_count, winner_username, team_count, alive_team_count };
+    // Team leader record for team_battle card display
+    let team_leader_wins = 0, team_leader_losses = 0, teams_at_leader = 0;
+    if (p.contest_format === 'team_battle') {
+      const teamGroups: Record<string, any[]> = {};
+      for (const pp of participants) {
+        const tid = pp.team_id ?? 'none';
+        if (!teamGroups[tid]) teamGroups[tid] = [];
+        teamGroups[tid].push(pp);
+      }
+      const teamRecords = Object.values(teamGroups).map((members: any[]) => ({ wins: members[0].wins ?? 0, losses: members[0].losses ?? 0 }));
+      team_leader_wins = Math.max(...teamRecords.map(t => t.wins), 0);
+      const leaders = teamRecords.filter(t => t.wins === team_leader_wins);
+      team_leader_losses = leaders[0]?.losses ?? 0;
+      teams_at_leader = leaders.length;
+    }
+    return { ...p, participant_count, alive_count, leader_streak, leaders_count, winner_username, team_count, alive_team_count, team_leader_wins, team_leader_losses, teams_at_leader };
   }) ?? [];
 
   return (

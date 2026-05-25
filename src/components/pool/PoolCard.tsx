@@ -120,7 +120,14 @@ export function PoolCard({ pool, showJoin = true }: PoolCardProps) {
               </span>
             ) : pool.contest_format === 'team_battle' ? (
               <span className="text-gray-400">
-                <span className="text-white font-bold">{(pool as any).alive_team_count ?? (pool as any).team_count ?? 0}</span> {((pool as any).alive_team_count ?? (pool as any).team_count ?? 0) === 1 ? 'team' : 'teams'} remain
+                {(() => {
+                  const total = (pool as any).alive_team_count ?? (pool as any).team_count ?? 0;
+                  const leaders = (pool as any).teams_at_leader ?? total;
+                  const lw = (pool as any).team_leader_wins ?? 0;
+                  const ll = (pool as any).team_leader_losses ?? 0;
+                  if (leaders === total) return <><span className="text-white font-bold">{total}</span> teams tied {lw}W-{ll}L</>;
+                  return <><span className="text-white font-bold">{leaders}</span> team{leaders !== 1 ? 's' : ''} lead {lw}W-{ll}L</>;
+                })()}
               </span>
             ) : (
               <span className="text-gray-400">

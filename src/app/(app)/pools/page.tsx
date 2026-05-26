@@ -31,6 +31,11 @@ export default async function PoolsPage({ searchParams }: Props) {
   if (params.format && params.format !== 'All') query = query.eq('contest_format', params.format);
   if (params.status) query = query.eq('status', params.status);
   if (params.q) query = query.ilike('name', `%${params.q}%`);
+  // Hide completed pools 24 hours after completion unless user is filtering for them
+  if (!params.status || params.status !== 'completed') {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    query = query.or(`status.neq.completed,updated_at.gt.${cutoff}`);
+  }
 
   const { data: pools } = await query.limit(50);
 

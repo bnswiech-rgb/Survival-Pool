@@ -91,15 +91,17 @@ export default async function PoolsPage({ searchParams }: Props) {
     if (p.contest_format === 'team_battle') {
       const teamGroups: Record<string, any[]> = {};
       for (const pp of participants) {
-        const tid = pp.team_id ?? 'none';
-        if (!teamGroups[tid]) teamGroups[tid] = [];
-        teamGroups[tid].push(pp);
+        if (!pp.team_id) continue; // skip teamless participants
+        if (!teamGroups[pp.team_id]) teamGroups[pp.team_id] = [];
+        teamGroups[pp.team_id].push(pp);
       }
       const teamRecords = Object.values(teamGroups).map((members: any[]) => ({ wins: members[0].wins ?? 0, losses: members[0].losses ?? 0 }));
-      team_leader_wins = Math.max(...teamRecords.map(t => t.wins), 0);
-      const leaders = teamRecords.filter(t => t.wins === team_leader_wins);
-      team_leader_losses = leaders[0]?.losses ?? 0;
-      teams_at_leader = leaders.length;
+      if (teamRecords.length > 0) {
+        team_leader_wins = Math.max(...teamRecords.map(t => t.wins));
+        const leaders = teamRecords.filter(t => t.wins === team_leader_wins);
+        team_leader_losses = Math.min(...leaders.map(t => t.losses));
+        teams_at_leader = leaders.length;
+      }
     }
     return { ...p, participant_count, alive_count, leader_streak, leaders_count, winner_username, team_count, alive_team_count, team_leader_wins, team_leader_losses, teams_at_leader };
   }) ?? [];

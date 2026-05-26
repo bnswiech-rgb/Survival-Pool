@@ -88,8 +88,34 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!participant) return NextResponse.json({ error: 'Not a participant in this contest' }, { status: 403 });
   if (participant.status === 'eliminated') return NextResponse.json({ error: 'You are eliminated from this contest' }, { status: 400 });
 
+  // For classic format: check if player lost their last completed round pick
+  // (they may not be marked eliminated yet if grading hasn't run)
+  const { data: pool } = await supabase.from('pools').select('*').eq('id', id).single();
+  if (pool?.contest_format === 'classic') {
+    const { data: lastCompletedRound } = await supabase
+      .from('rounds')
+      .select('id')
+      .eq('pool_id', id)
+      .eq('status', 'completed')
+      .order('round_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastCompletedRound) {
+      const { data: lastPick } = await supabase
+        .from('picks')
+        .select('status')
+        .eq('pool_id', id)
+        .eq('round_id', lastCompletedRound.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      // No pick submitted last round = loss in classic format
+      if (!lastPick || lastPick.status === 'lost') {
+        return NextResponse.json({ error: 'You are eliminated from this contest' }, { status: 400 });
+      }
+    }
+  }
+
   // For team_battle: block duplicate picks within the same team
-  const { data: pool } = await supabase.from('pools').select('contest_format').eq('id', id).single();
   if (pool?.contest_format === 'team_battle' && participant.team_id) {
     // Get all teammates in this pool
     const { data: teammates } = await supabase

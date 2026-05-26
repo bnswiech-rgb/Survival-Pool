@@ -235,7 +235,7 @@ export async function POST(_request: NextRequest) {
     const alive = (remaining ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status));
 
     if (alive.length <= 1 || winners.length > 0) {
-      if (pool.tiebreaker_active && alive.length === 1) {
+      if (alive.length === 1) {
         await supabase.from('pool_participants').update({ status: 'winner' })
           .eq('pool_id', round.pool_id).in('status', ['active', 'advanced']);
       }

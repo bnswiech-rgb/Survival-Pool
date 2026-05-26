@@ -613,8 +613,8 @@ export async function GET(request: NextRequest) {
     const alive = (remaining ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status));
 
     if (alive.length <= 1 || winners.length > 0) {
-      // In tiebreaker mode, the last surviving player needs to be crowned winner
-      if (pool.tiebreaker_active && alive.length === 1) {
+      // Crown the last surviving player as winner (tiebreaker or last-man-standing)
+      if (alive.length === 1) {
         await supabase
           .from('pool_participants')
           .update({ status: 'winner' })

@@ -239,7 +239,7 @@ export function PoolDetailClient({
     if (historyLoaded || historyLoading) return;
     setHistoryLoading(true);
     try {
-      const [{ data: rounds }, { data: myPicks }, { data: allPicks }] = await Promise.all([
+      const [{ data: rounds }, { data: myPicks }, { data: allPicks }, { data: allParticipants }] = await Promise.all([
         supabase
           .from('rounds')
           .select('*')
@@ -260,6 +260,10 @@ export function PoolDetailClient({
           .eq('pool_id', pool.id)
           .neq('status', 'pending')
           .order('submitted_at', { ascending: false }),
+        supabase
+          .from('pool_participants')
+          .select('*, profiles(username, avatar_url)')
+          .eq('pool_id', pool.id),
       ]);
 
       const myPicksByRound = Object.fromEntries(
@@ -276,6 +280,7 @@ export function PoolDetailClient({
           round,
           myPick: myPicksByRound[round.id] ?? null,
           allPicks: allPicksByRound[round.id] ?? [],
+          allParticipants: allParticipants ?? [],
         }))
       );
     } finally {
@@ -959,7 +964,7 @@ export function PoolDetailClient({
             </Card>
           ) : (
             <div className="space-y-4">
-              {historyRounds.map(({ round, myPick: histMyPick, allPicks: histAllPicks }) => (
+              {historyRounds.map(({ round, myPick: histMyPick, allPicks: histAllPicks, allParticipants: histParticipants }) => (
                 <Card key={round.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -1055,37 +1060,57 @@ export function PoolDetailClient({
                           </div>
                         )}
 
-                        {/* Everyone else's picks */}
-                        {histAllPicks.length > 0 && (
-                          <details className="group">
-                            <summary className="text-xs text-gray-400 cursor-pointer hover:text-white list-none flex items-center gap-1">
-                              <span className="group-open:hidden">▶</span>
-                              <span className="hidden group-open:inline">▼</span>
-                              Show all {histAllPicks.length} picks this round
-                            </summary>
-                            <div className="mt-2 space-y-1.5">
-                              {histAllPicks.map((pick: any) => (
-                                <div key={pick.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-gray-800/40">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <span className="text-xs font-medium text-gray-300 truncate">
-                                      {pick.profiles?.username ?? 'Unknown'}
-                                    </span>
-                                    <span className="text-xs text-gray-500 truncate">
-                                      {pickLabel(pick)}
-                                    </span>
+                        {/* Everyone else's picks + no-pick participants */}
+                        {(() => {
+                          const pickUserIds = new Set(histAllPicks.map((p: any) => p.user_id));
+                          // Participants who had no pick this round: eliminated on this round or survived without picking
+                          const noPickParticipants = (histParticipants ?? []).filter((p: any) =>
+                            !pickUserIds.has(p.user_id) && p.user_id !== currentUser?.id
+                          );
+                          const totalCount = histAllPicks.length + noPickParticipants.length;
+                          if (totalCount === 0) return null;
+                          return (
+                            <details className="group">
+                              <summary className="text-xs text-gray-400 cursor-pointer hover:text-white list-none flex items-center gap-1">
+                                <span className="group-open:hidden">▶</span>
+                                <span className="hidden group-open:inline">▼</span>
+                                Show all {totalCount} picks this round
+                              </summary>
+                              <div className="mt-2 space-y-1.5">
+                                {histAllPicks.map((pick: any) => (
+                                  <div key={pick.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-gray-800/40">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-xs font-medium text-gray-300 truncate">
+                                        {pick.profiles?.username ?? 'Unknown'}
+                                      </span>
+                                      <span className="text-xs text-gray-500 truncate">
+                                        {pickLabel(pick)}
+                                      </span>
+                                    </div>
+                                    <Badge variant={
+                                      pick.status === 'won' ? 'green' :
+                                      pick.status === 'lost' ? 'red' :
+                                      pick.status === 'push' ? 'blue' : 'gray'
+                                    } className="flex-shrink-0 text-xs">
+                                      {pick.status.toUpperCase()}
+                                    </Badge>
                                   </div>
-                                  <Badge variant={
-                                    pick.status === 'won' ? 'green' :
-                                    pick.status === 'lost' ? 'red' :
-                                    pick.status === 'push' ? 'blue' : 'gray'
-                                  } className="flex-shrink-0 text-xs">
-                                    {pick.status.toUpperCase()}
-                                  </Badge>
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        )}
+                                ))}
+                                {noPickParticipants.map((p: any) => (
+                                  <div key={p.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-gray-800/40">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-xs font-medium text-gray-300 truncate">
+                                        {p.profiles?.username ?? 'Unknown'}
+                                      </span>
+                                      <span className="text-xs text-gray-600 truncate">no pick</span>
+                                    </div>
+                                    <Badge variant="red" className="flex-shrink-0 text-xs">LOST</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          );
+                        })()}
                       </>
                     )}
                   </CardBody>

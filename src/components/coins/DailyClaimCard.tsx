@@ -47,6 +47,7 @@ export function DailyClaimCard({ lastClaimAt }: Props) {
       if (!res.ok) throw new Error(data.error ?? 'Failed to claim');
       setEarned({ gold: data.gold_earned, sweeps: data.sweeps_earned });
       setClaimed(true);
+      window.dispatchEvent(new Event('coins:updated'));
     } catch (err: any) {
       alert(err.message);
     } finally {

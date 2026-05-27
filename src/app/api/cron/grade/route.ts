@@ -605,15 +605,16 @@ export async function GET(request: NextRequest) {
     // Check if contest is over
     const { data: remaining } = await supabase
       .from('pool_participants')
-      .select('status')
+      .select('status, user_id, wins, losses')
       .eq('pool_id', round.pool_id)
       .in('status', ['active', 'advanced', 'winner']);
 
     const winners = (remaining ?? []).filter((p: any) => p.status === 'winner');
     const alive = (remaining ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status));
 
-    if (alive.length <= 1 || winners.length > 0) {
-      // Crown the last surviving player as winner (tiebreaker or last-man-standing)
+    const contestOver = alive.length <= 1 || winners.length > 0;
+
+    if (contestOver) {
       if (alive.length === 1) {
         await supabase
           .from('pool_participants')
@@ -635,6 +636,85 @@ export async function GET(request: NextRequest) {
         status: 'open',
       });
     }
+
+    // Send round result emails (fire and forget)
+    Promise.resolve().then(async () => {
+      try {
+        const { sendRoundResultsEmail, sendWinnerEmail } = await import('@/lib/email');
+
+        // Get all participants for this pool
+        const { data: allParticipants } = await supabase
+          .from('pool_participants')
+          .select('user_id, status, wins, losses')
+          .eq('pool_id', round.pool_id);
+
+        // Get round picks
+        const { data: roundPicks } = await supabase
+          .from('picks')
+          .select('user_id, status, game, pick_type, side, line_value')
+          .eq('round_id', roundId);
+
+        const pickByUser = Object.fromEntries((roundPicks ?? []).map((p: any) => [p.user_id, p]));
+
+        // Get emails + usernames
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        const { data: profiles } = await supabase.from('profiles').select('id, username').eq('pool_id' as any, round.pool_id);
+        // fallback: get all profiles for these user IDs
+        const userIds = (allParticipants ?? []).map((p: any) => p.user_id);
+        const { data: profileList } = await supabase.from('profiles').select('id, username').in('id', userIds);
+        const profileMap = Object.fromEntries((profileList ?? []).map((p: any) => [p.id, p.username]));
+        const emailMap = Object.fromEntries((authUsers?.users ?? []).map((u: any) => [u.id, u.email]));
+
+        const eliminatedThisRound = (allParticipants ?? []).filter((p: any) => p.status === 'eliminated').length;
+        const survivorsLeft = (allParticipants ?? []).filter((p: any) => ['active', 'advanced', 'winner'].includes(p.status)).length;
+
+        // Find winner username if contest over
+        let winnerUsername = '';
+        if (contestOver) {
+          const winnerParticipant = (allParticipants ?? []).find((p: any) => p.status === 'winner');
+          if (winnerParticipant) {
+            winnerUsername = profileMap[winnerParticipant.user_id] ?? 'Unknown';
+          }
+        }
+
+        for (const participant of allParticipants ?? []) {
+          const email = emailMap[participant.user_id];
+          if (!email) continue;
+          const username = profileMap[participant.user_id] ?? 'Player';
+          const pick = pickByUser[participant.user_id];
+          const pickDescription = pick
+            ? `${pick.side} — ${pick.game}`
+            : 'No pick submitted';
+          const pickResult = pick?.status ?? 'lost';
+          const stillAlive = ['active', 'advanced', 'winner'].includes(participant.status);
+
+          if (contestOver) {
+            await sendWinnerEmail(email, {
+              username,
+              poolName: pool.name,
+              poolId: round.pool_id,
+              isWinner: participant.status === 'winner',
+              winnerUsername,
+              finalRecord: `${participant.wins}W-${participant.losses}L`,
+            });
+          } else {
+            await sendRoundResultsEmail(email, {
+              username,
+              poolName: pool.name,
+              poolId: round.pool_id,
+              roundNumber: round.round_number,
+              pickResult,
+              pickDescription,
+              stillAlive,
+              eliminatedCount: eliminatedThisRound,
+              survivorsLeft,
+            });
+          }
+        }
+      } catch (e) {
+        console.error('[grade] Failed to send round result emails:', e);
+      }
+    });
 
     advancedRounds.push(roundId);
   }

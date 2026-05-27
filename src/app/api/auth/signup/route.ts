@@ -59,5 +59,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Account created but sign-in failed. Please log in.' }, { status: 400 });
   }
 
+  // Welcome email (fire and forget)
+  Promise.resolve().then(async () => {
+    try {
+      const { sendWelcomeEmail } = await import('@/lib/email');
+      await sendWelcomeEmail(email, username);
+    } catch (e) {
+      console.error('Failed to send welcome email:', e);
+    }
+  });
+
   return response;
 }

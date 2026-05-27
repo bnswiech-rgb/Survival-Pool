@@ -115,9 +115,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
-  // For team_battle: block duplicate picks within the same team
+  // For team_battle: block conflicting picks within the same team
   if (pool?.contest_format === 'team_battle' && participant.team_id) {
-    // Get all teammates in this pool
     const { data: teammates } = await supabase
       .from('pool_participants')
       .select('user_id')
@@ -127,21 +126,44 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (teammates?.length) {
       const teammateIds = teammates.map((t: any) => t.user_id);
-      const { data: conflictingPick } = await supabase
+      const { data: teammatePicks } = await supabase
         .from('picks')
-        .select('id, profiles(username)')
+        .select('id, side, pick_type, profiles(username)')
         .eq('round_id', round_id)
         .eq('game', game)
-        .eq('side', side)
-        .in('user_id', teammateIds)
-        .maybeSingle();
+        .in('user_id', teammateIds);
 
-      if (conflictingPick) {
-        const who = (conflictingPick as any).profiles?.username ?? 'A teammate';
-        return NextResponse.json(
-          { error: `${who} already has this pick — teammates must make different picks` },
-          { status: 400 }
-        );
+      for (const tp of teammatePicks ?? []) {
+        const who = (tp as any).profiles?.username ?? 'A teammate';
+
+        // Block exact duplicate
+        if (tp.side === side) {
+          return NextResponse.json(
+            { error: `${who} already has this exact pick — teammates must make different picks` },
+            { status: 400 }
+          );
+        }
+
+        // Block opposing sides of the same game (guarantees one wins, one loses = team loss)
+        // Two picks on the same game are opposing if they cover opposite outcomes:
+        // - spread/moneyline: different sides of the same game
+        // - total: Over vs Under on the same line type
+        if (tp.pick_type === pick_type) {
+          const isOpposingTotal =
+            pick_type === 'total' &&
+            ((side.toLowerCase().startsWith('over') && tp.side.toLowerCase().startsWith('under')) ||
+             (side.toLowerCase().startsWith('under') && tp.side.toLowerCase().startsWith('over')));
+
+          const isOpposingSpreadOrML =
+            (pick_type === 'spread' || pick_type === 'moneyline') && tp.side !== side;
+
+          if (isOpposingTotal || isOpposingSpreadOrML) {
+            return NextResponse.json(
+              { error: `${who} is already on the other side of this game — teammates can't pick opposing sides` },
+              { status: 400 }
+            );
+          }
+        }
       }
     }
   }

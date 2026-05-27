@@ -41,6 +41,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
+  // $5,000 max prize pool per contest (NY/FL sweepstakes compliance)
+  // 1 GC = $0.01 = 1 SC, so cap is 500,000 in either unit
+  const MAX_PRIZE_POOL = 500_000; // cents or coins
+  const feeCoins = entry_fee_coins ?? 0;
+  const feeCents = entry_fee_cents ?? 0;
+  const rake = rake_percentage ?? 10;
+  if (max_entries && (feeCoins > 0 || feeCents > 0)) {
+    const netCoins  = Math.round(feeCoins  * max_entries * (1 - rake / 100));
+    const netCents  = Math.round(feeCents  * max_entries * (1 - rake / 100));
+    if (netCoins > MAX_PRIZE_POOL || netCents > MAX_PRIZE_POOL) {
+      return NextResponse.json({
+        error: `Prize pool cannot exceed $5,000 per contest. Lower the entry fee or reduce max entries.`,
+      }, { status: 400 });
+    }
+  }
+
   // Default pick_deadline to 9:30 PM ET on the start date if not provided
   const resolvedPickDeadline = pick_deadline ?? (() => {
     const d = new Date(start_date);

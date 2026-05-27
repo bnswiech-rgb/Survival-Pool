@@ -25,7 +25,7 @@ export default function SweepstakesRulesPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">3. Eligibility</h2>
-          <p>The Program is open to legal residents of the United States who are 18 years of age or older at the time of participation, except residents of the following states where the Program is void: Arizona, Arkansas, Connecticut, Delaware, Florida, Maryland, Michigan, Montana, Nebraska, Nevada, New Jersey, New York, South Dakota, Tennessee, and Vermont (collectively, "Excluded States").</p>
+          <p>The Program is open to legal residents of the United States who are 18 years of age or older at the time of participation, except residents of the following states where the Program is void: Idaho, Nevada, and Washington (collectively, "Excluded States").</p>
           <p>Employees, officers, directors, and agents of Sponsor, and their immediate family members (spouse, parents, siblings, children) and household members, are not eligible to redeem Sweeps Coins for prizes.</p>
           <p>Participants must have a valid, active SurvivorPicks account in good standing. Sponsor reserves the right to verify eligibility at any time.</p>
         </section>

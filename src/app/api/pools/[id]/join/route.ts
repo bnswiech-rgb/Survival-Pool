@@ -17,13 +17,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   // Check max entries
-  if (pool.max_entries) {
-    const { count } = await supabase
-      .from('pool_participants')
-      .select('*', { count: 'exact', head: true })
-      .eq('pool_id', id);
-    if ((count ?? 0) >= pool.max_entries) {
-      return NextResponse.json({ error: 'Contest is full' }, { status: 400 });
+  const { count: currentCount } = await supabase
+    .from('pool_participants')
+    .select('*', { count: 'exact', head: true })
+    .eq('pool_id', id);
+
+  if (pool.max_entries && (currentCount ?? 0) >= pool.max_entries) {
+    return NextResponse.json({ error: 'Contest is full' }, { status: 400 });
+  }
+
+  // $5,000 max prize pool per contest (NY/FL sweepstakes compliance)
+  const MAX_PRIZE_POOL = 500_000;
+  const rake = pool.rake_percentage ?? 10;
+  const newCount = (currentCount ?? 0) + 1;
+  if ((pool.entry_fee_coins ?? 0) > 0 || pool.entry_fee_cents > 0) {
+    const netCoins = Math.round((pool.entry_fee_coins ?? 0) * newCount * (1 - rake / 100));
+    const netCents = Math.round(pool.entry_fee_cents * newCount * (1 - rake / 100));
+    if (netCoins > MAX_PRIZE_POOL || netCents > MAX_PRIZE_POOL) {
+      return NextResponse.json({ error: 'This contest has reached its maximum prize pool of $5,000.' }, { status: 400 });
     }
   }
 

@@ -24,6 +24,31 @@ export async function POST(request: NextRequest) {
 
   const { pack_id, custom_gold } = await request.json();
 
+  // Deposit limit enforcement
+  const { data: limProfile } = await supabase
+    .from('profiles')
+    .select('daily_deposit_limit_cents, deposit_spent_today_cents, deposit_window_start, self_excluded_until')
+    .eq('id', user.id)
+    .single();
+
+  // Block self-excluded users from purchasing
+  if (limProfile?.self_excluded_until && new Date(limProfile.self_excluded_until) > new Date()) {
+    return NextResponse.json({ error: 'Your account is self-excluded' }, { status: 403 });
+  }
+
+  if (limProfile?.daily_deposit_limit_cents) {
+    const windowStart = limProfile.deposit_window_start ? new Date(limProfile.deposit_window_start) : null;
+    const now = new Date();
+    const windowExpired = !windowStart || (now.getTime() - windowStart.getTime()) >= 24 * 60 * 60 * 1000;
+    const spentToday = windowExpired ? 0 : (limProfile.deposit_spent_today_cents ?? 0);
+    const remaining = limProfile.daily_deposit_limit_cents - spentToday;
+    if (remaining <= 0) {
+      return NextResponse.json({
+        error: `You have reached your daily deposit limit of $${(limProfile.daily_deposit_limit_cents / 100).toFixed(2)}. Your limit resets in 24 hours.`,
+      }, { status: 400 });
+    }
+  }
+
   let pack: CoinPack;
   if (pack_id === 'custom') {
     const gold = parseInt(custom_gold);

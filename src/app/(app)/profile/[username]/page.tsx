@@ -186,7 +186,7 @@ export default async function ProfilePage({ params }: Props) {
       </Card>
 
       {/* Responsible Gaming — own profile only */}
-      {isOwnProfile && <SelfExclusionCard />}
+      {isOwnProfile && <SelfExclusionCard currentLimitCents={profile.daily_deposit_limit_cents ?? null} />}
 
       {/* Recent Picks */}
       <Card>

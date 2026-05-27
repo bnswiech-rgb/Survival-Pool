@@ -52,16 +52,23 @@ export async function POST(request: NextRequest) {
   // Credit coins
   const { data: profile } = await supabase
     .from('profiles')
-    .select('gold_coins, sweeps_coins, lifetime_gold_purchased')
+    .select('gold_coins, sweeps_coins, lifetime_gold_purchased, deposit_spent_today_cents, deposit_window_start')
     .eq('id', user_id)
     .single();
 
   if (!profile) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
+  const amountPaid = session.amount_total ?? 0;
+  const windowStart = profile.deposit_window_start ? new Date(profile.deposit_window_start) : null;
+  const windowExpired = !windowStart || (Date.now() - windowStart.getTime()) >= 24 * 60 * 60 * 1000;
+  const newSpent = (windowExpired ? 0 : (profile.deposit_spent_today_cents ?? 0)) + amountPaid;
+
   await supabase.from('profiles').update({
     gold_coins: profile.gold_coins + goldAmount,
     sweeps_coins: profile.sweeps_coins + sweepsAmount,
     lifetime_gold_purchased: profile.lifetime_gold_purchased + goldAmount,
+    deposit_spent_today_cents: newSpent,
+    deposit_window_start: windowExpired ? new Date().toISOString() : profile.deposit_window_start,
   }).eq('id', user_id);
 
   await supabase.from('coin_transactions').insert({

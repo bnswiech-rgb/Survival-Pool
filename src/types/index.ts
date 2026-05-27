@@ -26,6 +26,10 @@ export interface Profile {
   last_daily_bonus_at: string | null;
   self_excluded_until: string | null;
   self_exclusion_requested_at: string | null;
+  daily_deposit_limit_cents: number | null;
+  deposit_limit_set_at: string | null;
+  deposit_spent_today_cents: number;
+  deposit_window_start: string | null;
   created_at: string;
 }
 

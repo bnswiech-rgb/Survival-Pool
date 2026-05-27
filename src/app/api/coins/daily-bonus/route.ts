@@ -2,9 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 
-// 50 GC + 5 SC per day (~10% of a standard 500 GC pool entry)
-const DAILY_GOLD = 50;
-const DAILY_SWEEPS = 5;
+const DAILY_GOLD = 250;
+const DAILY_SWEEPS = 50;
+
+function nextMidnightUTC(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+}
+
+function isClaimable(lastBonusAt: string | null): boolean {
+  if (!lastBonusAt) return true;
+  const last = new Date(lastBonusAt);
+  const now = new Date();
+  const todayMidnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return last < todayMidnightUTC;
+}
 
 export async function GET(_request: NextRequest) {
   const supabase = await createClient();
@@ -18,7 +30,8 @@ export async function GET(_request: NextRequest) {
     .single();
 
   const claimable = isClaimable(profile?.last_daily_bonus_at ?? null);
-  return NextResponse.json({ claimable, gold: DAILY_GOLD, sweeps: DAILY_SWEEPS });
+  const nextClaimAt = claimable ? null : nextMidnightUTC().toISOString();
+  return NextResponse.json({ claimable, gold: DAILY_GOLD, sweeps: DAILY_SWEEPS, next_claim_at: nextClaimAt });
 }
 
 export async function POST(_request: NextRequest) {
@@ -57,15 +70,12 @@ export async function POST(_request: NextRequest) {
     note: 'Daily login bonus',
   });
 
-  return NextResponse.json({ success: true, gold: DAILY_GOLD, sweeps: DAILY_SWEEPS });
-}
-
-function isClaimable(lastBonusAt: string | null): boolean {
-  if (!lastBonusAt) return true;
-  const last = new Date(lastBonusAt);
-  const now = new Date();
-  // Reset at midnight ET (UTC-4 during EDT, UTC-5 during EST)
-  // Simple approach: claimable if last claim was before today's midnight UTC
-  const todayMidnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  return last < todayMidnightUTC;
+  return NextResponse.json({
+    success: true,
+    gold_earned: DAILY_GOLD,
+    sweeps_earned: DAILY_SWEEPS,
+    new_gold_coins: profile.gold_coins + DAILY_GOLD,
+    new_sweeps_coins: profile.sweeps_coins + DAILY_SWEEPS,
+    next_claim_at: nextMidnightUTC().toISOString(),
+  });
 }

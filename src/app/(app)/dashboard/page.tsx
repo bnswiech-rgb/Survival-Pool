@@ -7,6 +7,7 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatCents, getContestFormatLabel, formatPickLabel } from '@/lib/utils';
 import { ActivityFeed } from '@/components/activity/ActivityFeed';
+import { DailyClaimCard } from '@/components/coins/DailyClaimCard';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -89,6 +90,8 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <DailyClaimCard lastClaimAt={profile?.last_daily_bonus_at ?? null} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Active Contests */}

@@ -13,6 +13,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq('id', user.id)
     .single();
 
+  // Block self-excluded users from the app
+  if (profile?.self_excluded_until && new Date(profile.self_excluded_until) > new Date()) {
+    redirect(`/self-excluded?until=${encodeURIComponent(profile.self_excluded_until)}`);
+  }
+
   return (
     <div className="min-h-screen bg-gray-950">
       <Navbar profile={profile} />
@@ -22,12 +27,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <footer className="border-t border-gray-800 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
           <p className="text-gray-500 text-xs">
-            SurvivorPicks is a peer-to-peer sports picking contest platform. No sportsbook wagering occurs. Must be 18+. Not available where prohibited.
+            SurvivorPicks is a peer-to-peer sports picking contest platform. No purchase necessary to enter or win. No sportsbook wagering occurs. Must be 18+. Void where prohibited.
           </p>
-          <div className="flex items-center justify-center gap-4 text-xs">
+          <div className="flex items-center justify-center gap-4 text-xs flex-wrap">
             <a href="/terms" className="text-gray-600 hover:text-gray-400 transition-colors">Terms of Service</a>
             <span className="text-gray-700">·</span>
             <a href="/privacy" className="text-gray-600 hover:text-gray-400 transition-colors">Privacy Policy</a>
+            <span className="text-gray-700">·</span>
+            <a href="/sweepstakes-rules" className="text-gray-600 hover:text-gray-400 transition-colors">Sweepstakes Rules</a>
+            <span className="text-gray-700">·</span>
+            <a href="/rules" className="text-gray-600 hover:text-gray-400 transition-colors">Contest Rules</a>
+            <span className="text-gray-700">·</span>
+            <a href="/responsible-gaming" className="text-gray-600 hover:text-gray-400 transition-colors">Responsible Gaming</a>
           </div>
         </div>
       </footer>

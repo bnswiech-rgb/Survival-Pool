@@ -24,6 +24,8 @@ export interface Profile {
   sweeps_coins: number;
   lifetime_gold_purchased: number;
   last_daily_bonus_at: string | null;
+  self_excluded_until: string | null;
+  self_exclusion_requested_at: string | null;
   created_at: string;
 }
 

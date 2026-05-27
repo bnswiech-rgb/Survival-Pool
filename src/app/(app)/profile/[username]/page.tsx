@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { getContestFormatLabel, getStatusBadgeColor, formatPickLabel } from '@/lib/utils';
 import Link from 'next/link';
 import { FollowButton } from './FollowButton';
+import { SelfExclusionCard } from '@/components/account/SelfExclusionCard';
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -183,6 +184,9 @@ export default async function ProfilePage({ params }: Props) {
           )}
         </CardBody>
       </Card>
+
+      {/* Responsible Gaming — own profile only */}
+      {isOwnProfile && <SelfExclusionCard />}
 
       {/* Recent Picks */}
       <Card>

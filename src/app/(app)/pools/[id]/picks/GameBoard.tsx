@@ -36,7 +36,7 @@ interface GameBoardProps {
   onPickSubmitted?: () => void;
 }
 
-const SPORTS = ['All', 'NBA', 'WNBA', 'MLB', 'ATP', 'WTA'] as const;
+const SPORTS = ['All', 'NBA', 'WNBA', 'MLB', 'NHL', 'ATP', 'WTA'] as const;
 
 export default function GameBoard({ pool, round, existingPick, isLocked, inline, onPickSubmitted }: GameBoardProps) {
   const router = useRouter();

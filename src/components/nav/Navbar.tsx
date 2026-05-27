@@ -53,12 +53,7 @@ export function Navbar({ profile }: NavbarProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            {profile && (
-              <CoinBalance
-                initialGold={profile.gold_coins ?? 0}
-                initialSweeps={profile.sweeps_coins ?? 0}
-              />
-            )}
+            {/* CoinBalance hidden until payments go live */}
             {profile ? (
               <div className="relative">
                 <button

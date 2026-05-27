@@ -91,8 +91,6 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <DailyClaimCard lastClaimAt={profile?.last_daily_bonus_at ?? null} />
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Active Contests */}
         <div className="lg:col-span-2 space-y-4">

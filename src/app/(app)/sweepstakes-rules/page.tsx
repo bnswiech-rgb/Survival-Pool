@@ -14,12 +14,12 @@ export default function SweepstakesRulesPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">1. Sponsor</h2>
-          <p>Brehtan Swiech, operating as SurvivorPicks ("Sponsor"). Contact: <span className="text-green-400">legal@survivorpicks.com</span>.</p>
+          <p>Brehtan Swiech, operating as Sharpr ("Sponsor"). Contact: <span className="text-green-400">legal@survivorpicks.com</span>.</p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">2. Overview</h2>
-          <p>SurvivorPicks operates a sweepstakes promotional program ("Program") using two virtual currencies: Gold Coins ("GC") and Sweeps Coins ("SC"). Gold Coins are purchased virtual currency for entertainment play only and have no cash value. Sweeps Coins are promotional sweepstakes entries awarded at no charge that may be redeemed for prizes as described herein.</p>
+          <p>Sharpr operates a sweepstakes promotional program ("Program") using two virtual currencies: Gold Coins ("GC") and Sweeps Coins ("SC"). Gold Coins are purchased virtual currency for entertainment play only and have no cash value. Sweeps Coins are promotional sweepstakes entries awarded at no charge that may be redeemed for prizes as described herein.</p>
           <p>No purchase is necessary to receive Sweeps Coins or to participate in the sweepstakes. Purchasing Gold Coins does not increase your chances of winning any sweepstakes prize. All participants who enter through the free Alternate Method of Entry (AMOE) have the same opportunity to receive Sweeps Coins and win prizes as those who purchase Gold Coins.</p>
         </section>
 
@@ -27,7 +27,7 @@ export default function SweepstakesRulesPage() {
           <h2 className="text-lg font-bold text-white">3. Eligibility</h2>
           <p>The Program is open to legal residents of the United States who are 18 years of age or older at the time of participation, except residents of the following states where the Program is void: Idaho, Nevada, and Washington (collectively, "Excluded States").</p>
           <p>Employees, officers, directors, and agents of Sponsor, and their immediate family members (spouse, parents, siblings, children) and household members, are not eligible to redeem Sweeps Coins for prizes.</p>
-          <p>Participants must have a valid, active SurvivorPicks account in good standing. Sponsor reserves the right to verify eligibility at any time.</p>
+          <p>Participants must have a valid, active Sharpr account in good standing. Sponsor reserves the right to verify eligibility at any time.</p>
         </section>
 
         <section className="space-y-3">
@@ -38,9 +38,9 @@ export default function SweepstakesRulesPage() {
               <strong className="text-white">Daily Free Bonus:</strong> Registered users may claim a daily free bonus of 50 SC once per calendar day (UTC). No purchase required. Log in and click "Claim" on the dashboard.
             </li>
             <li>
-              <strong className="text-white">Alternate Method of Entry (AMOE) — Mail-In:</strong> To receive 50 SC at no cost, hand-print your full legal name, mailing address, email address associated with your SurvivorPicks account, and the statement "I am requesting my free Sweeps Coins" on a 3×5 inch card and mail it to:
+              <strong className="text-white">Alternate Method of Entry (AMOE) — Mail-In:</strong> To receive 50 SC at no cost, hand-print your full legal name, mailing address, email address associated with your Sharpr account, and the statement "I am requesting my free Sweeps Coins" on a 3×5 inch card and mail it to:
               <div className="mt-2 pl-4 border-l-2 border-gray-700 text-gray-400">
-                SurvivorPicks AMOE Request<br />
+                Sharpr AMOE Request<br />
                 c/o Brehtan Swiech<br />
                 [Your Mailing Address — add before launch]<br />
               </div>

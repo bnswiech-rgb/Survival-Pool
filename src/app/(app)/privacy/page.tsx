@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       </div>
 
       <div className="prose prose-invert max-w-none space-y-6 text-gray-300 text-sm leading-relaxed">
-        <p>This Privacy Policy describes how Brehtan Swiech, operating as SurvivorPicks ("we," "us," or "our"), collects, uses, and shares information about you when you use SurvivorPicks ("the Platform"). By using the Platform, you agree to this Privacy Policy.</p>
+        <p>This Privacy Policy describes how Brehtan Swiech, operating as Sharpr ("we," "us," or "our"), collects, uses, and shares information about you when you use Sharpr ("the Platform"). By using the Platform, you agree to this Privacy Policy.</p>
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">1. Information We Collect</h2>
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
           <p><strong className="text-white">Other users:</strong> Your username and contest picks are visible to other participants in the same contest after each round's pick deadline passes. Your email address and payment information are never visible to other users.</p>
           <p><strong className="text-white">Service providers:</strong> We share information with third-party vendors who help us operate the Platform, including Supabase (database and authentication), Vercel (hosting), Stripe (payment processing), and Resend (transactional email). These providers are contractually prohibited from using your data for any purpose other than providing services to us.</p>
           <p><strong className="text-white">Legal requirements:</strong> We may disclose your information if required by law, subpoena, court order, or other governmental authority, or if we believe in good faith that disclosure is necessary to protect our rights or the safety of any person.</p>
-          <p><strong className="text-white">Business transfers:</strong> If SurvivorPicks is acquired or merged with another entity, your information may be transferred as part of that transaction. We will notify you before your information is transferred and becomes subject to a different privacy policy.</p>
+          <p><strong className="text-white">Business transfers:</strong> If Sharpr is acquired or merged with another entity, your information may be transferred as part of that transaction. We will notify you before your information is transferred and becomes subject to a different privacy policy.</p>
           <p><strong className="text-white">Sweepstakes winners:</strong> As required by law, winners of sweepstakes prizes may have their name disclosed upon request.</p>
         </section>
 
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-bold text-white">11. Contact</h2>
           <p>For privacy questions, data access requests, or deletion requests, contact us at:</p>
           <p className="text-green-400">legal@survivorpicks.com</p>
-          <p className="text-gray-500">Brehtan Swiech / SurvivorPicks</p>
+          <p className="text-gray-500">Brehtan Swiech / Sharpr</p>
           <p className="text-gray-500 text-xs mt-2">Note: Replace with your actual contact email and mailing address before launch.</p>
         </section>
       </div>

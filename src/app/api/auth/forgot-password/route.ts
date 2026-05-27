@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify({
       email,
       gotrue_meta_security: {},
-      redirect_to: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://survival-pool-swick-s-projects.vercel.app'}/reset-password`,
+      redirect_to: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sharprpicks.com'}/reset-password`,
     }),
   });
 

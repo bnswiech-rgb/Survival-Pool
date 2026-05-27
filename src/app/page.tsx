@@ -154,7 +154,7 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Trophy size={20} className="text-green-500" />
-            <span className="font-bold text-white">SurvivorPicks</span>
+            <span className="font-bold text-white">Sharpr</span>
           </div>
           <div className="flex justify-center gap-6 text-gray-400 text-sm mb-4">
             <Link href="/rules" className="hover:text-white transition-colors">Rules</Link>
@@ -162,7 +162,7 @@ export default async function Home() {
             <Link href="/signup" className="hover:text-white transition-colors">Sign Up</Link>
           </div>
           <p className="text-gray-500 text-xs max-w-2xl mx-auto">
-            SurvivorPicks is a peer-to-peer sports picking contest platform. No sportsbook wagering occurs. Must be 18+. Not available where prohibited. Please play responsibly.
+            Sharpr is a peer-to-peer sports picking contest platform. No sportsbook wagering occurs. Must be 18+. Not available where prohibited. Please play responsibly.
           </p>
         </div>
       </footer>

@@ -22,7 +22,7 @@ export default async function SelfExcludedPage({ searchParams }: Props) {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-2 font-bold text-white w-fit">
             <Trophy size={20} className="text-green-500" />
-            SurvivorPicks
+            Sharpr
           </div>
         </div>
       </nav>
@@ -37,15 +37,15 @@ export default async function SelfExcludedPage({ searchParams }: Props) {
             <h1 className="text-2xl font-black text-white mb-2">Account Self-Excluded</h1>
             {isPermanent ? (
               <p className="text-gray-400">
-                Your account is permanently self-excluded. You will not be able to access SurvivorPicks contests.
+                Your account is permanently self-excluded. You will not be able to access Sharpr contests.
               </p>
             ) : formattedDate ? (
               <p className="text-gray-400">
-                Your account is self-excluded until <span className="text-white font-semibold">{formattedDate}</span>. You will not be able to access SurvivorPicks until after this date.
+                Your account is self-excluded until <span className="text-white font-semibold">{formattedDate}</span>. You will not be able to access Sharpr until after this date.
               </p>
             ) : (
               <p className="text-gray-400">
-                Your account is currently self-excluded from SurvivorPicks.
+                Your account is currently self-excluded from Sharpr.
               </p>
             )}
           </div>

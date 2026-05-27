@@ -9,7 +9,7 @@ export default function RulesPage() {
         <div className="max-w-4xl mx-auto">
           <Link href="/" className="flex items-center gap-2 font-bold text-white hover:text-green-400 transition-colors w-fit">
             <Trophy size={20} className="text-green-500" />
-            SurvivorPicks
+            Sharpr
           </Link>
         </div>
       </nav>
@@ -17,7 +17,7 @@ export default function RulesPage() {
       <div className="max-w-4xl mx-auto px-4 py-12 space-y-12">
         <div>
           <h1 className="text-4xl font-black text-white mb-3">Contest Rules</h1>
-          <p className="text-gray-400 text-lg">Everything you need to know about how SurvivorPicks contests work.</p>
+          <p className="text-gray-400 text-lg">Everything you need to know about how Sharpr contests work.</p>
         </div>
 
         {/* Compliance Banner */}
@@ -26,7 +26,7 @@ export default function RulesPage() {
           <div>
             <div className="font-bold text-yellow-400 mb-1">Important Notice</div>
             <p className="text-gray-300 text-sm leading-relaxed">
-              SurvivorPicks is a peer-to-peer sports picking contest platform. This is NOT a sportsbook. No wagering occurs on our platform. Entry fees are pooled among participants and redistributed as prizes per contest rules. Must be 18 years of age or older. Not available where prohibited by law. Please play responsibly.
+              Sharpr is a peer-to-peer sports picking contest platform. This is NOT a sportsbook. No wagering occurs on our platform. Entry fees are pooled among participants and redistributed as prizes per contest rules. Must be 18 years of age or older. Not available where prohibited by law. Please play responsibly.
             </p>
           </div>
         </div>
@@ -35,7 +35,7 @@ export default function RulesPage() {
         <section className="space-y-4">
           <h2 className="text-2xl font-bold text-white border-b border-gray-800 pb-3">How Contests Work</h2>
           <div className="text-gray-300 space-y-3 leading-relaxed">
-            <p>SurvivorPicks hosts peer-to-peer survival picking contests where participants compete against each other, not against the house. Entry fees are collected, a small platform fee is deducted, and the remaining prize pool is distributed to survivors per the contest rules.</p>
+            <p>Sharpr hosts peer-to-peer survival picking contests where participants compete against each other, not against the house. Entry fees are collected, a small platform fee is deducted, and the remaining prize pool is distributed to survivors per the contest rules.</p>
             <p>Each round, every active participant submits exactly one eligible pick before the deadline. After the round closes, picks are graded and participants either advance or are eliminated based on the contest format.</p>
           </div>
         </section>
@@ -134,7 +134,7 @@ export default function RulesPage() {
             <h2 className="text-xl font-bold text-white">Responsible Play</h2>
           </div>
           <div className="text-gray-300 text-sm space-y-2 leading-relaxed">
-            <p>SurvivorPicks is committed to responsible play. Participation in picking contests should be fun and social.</p>
+            <p>Sharpr is committed to responsible play. Participation in picking contests should be fun and social.</p>
             <p><strong className="text-white">Must be 18+.</strong> By creating an account and joining contests, you confirm you are at least 18 years of age.</p>
             <p><strong className="text-white">Know your limits.</strong> Only enter contests with entry fees you can afford to lose. Never enter more than you are comfortable with.</p>
             <p><strong className="text-white">Not available where prohibited.</strong> It is your responsibility to ensure participation in peer-to-peer picking contests is legal in your jurisdiction.</p>
@@ -143,7 +143,7 @@ export default function RulesPage() {
         </section>
 
         <div className="text-center text-gray-500 text-sm pb-8">
-          <p>SurvivorPicks is a peer-to-peer sports picking contest platform. No sportsbook wagering occurs.</p>
+          <p>Sharpr is a peer-to-peer sports picking contest platform. No sportsbook wagering occurs.</p>
           <p className="mt-1">Must be 18+. Not available where prohibited. Play responsibly.</p>
         </div>
       </div>

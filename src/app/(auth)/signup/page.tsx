@@ -38,7 +38,7 @@ export default function SignupPage() {
     <div className="w-full max-w-sm">
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-8">
         <h1 className="text-2xl font-bold text-white mb-2">Create your account</h1>
-        <p className="text-gray-400 text-sm mb-6">Join SurvivorPicks and start competing</p>
+        <p className="text-gray-400 text-sm mb-6">Join Sharpr and start competing</p>
         <form onSubmit={handleSignup} className="space-y-4">
           <Input
             id="username"
@@ -81,7 +81,7 @@ export default function SignupPage() {
           </Button>
         </form>
         <p className="text-center text-gray-500 text-xs mt-4">
-          By signing up you agree that SurvivorPicks is a peer-to-peer picking contest. Must be 18+.
+          By signing up you agree that Sharpr is a peer-to-peer picking contest. Must be 18+.
         </p>
         <p className="text-center text-gray-400 text-sm mt-4">
           Already have an account?{' '}

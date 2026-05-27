@@ -6,7 +6,7 @@ import { Toaster } from 'react-hot-toast';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'SurvivorPicks | Sports Survival Contest',
+  title: 'Sharpr | Sports Survival Contests',
   description: 'Peer-to-peer sports survival picking contests. Submit your pick, survive the round, win the prize pool.',
 };
 

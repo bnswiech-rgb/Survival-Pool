@@ -12,7 +12,7 @@ export async function sendNewPoolEmail(pool: {
 }, recipients: string[]) {
   if (!recipients.length) return;
 
-  const joinUrl = `https://survival-pool.vercel.app/pools/${pool.id}`;
+  const joinUrl = `https://sharprpicks.com/pools/${pool.id}`;
 
   const formatLabel: Record<string, string> = {
     classic: 'Classic Survival (1 loss and you\'re out)',
@@ -31,7 +31,7 @@ export async function sendNewPoolEmail(pool: {
   const html = `
     <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; background: #111; color: #fff; padding: 32px; border-radius: 12px;">
       <h1 style="font-size: 24px; font-weight: 900; margin: 0 0 4px;">New Contest Alert 🏆</h1>
-      <p style="color: #aaa; margin: 0 0 24px;">A new survival pool just dropped on Swickuation.</p>
+      <p style="color: #aaa; margin: 0 0 24px;">A new survival pool just dropped on Sharpr.</p>
 
       <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: 800; margin: 0 0 8px; color: #fff;">${pool.name}</h2>
@@ -45,7 +45,7 @@ export async function sendNewPoolEmail(pool: {
       </a>
 
       <p style="color: #555; font-size: 12px; text-align: center; margin-top: 24px;">
-        You're receiving this because you signed up at survival-pool.vercel.app
+        You're receiving this because you signed up at sharprpicks.com
       </p>
     </div>
   `;
@@ -56,7 +56,7 @@ export async function sendNewPoolEmail(pool: {
   for (let i = 0; i < recipients.length; i += 50) {
     const batch = recipients.slice(i, i + 50);
     await resend.emails.send({
-      from: 'Swickuation <onboarding@resend.dev>',
+      from: 'Sharpr <noreply@sharprpicks.com>',
       to: batch,
       subject: `New Pool: ${pool.name} 🏆`,
       html,

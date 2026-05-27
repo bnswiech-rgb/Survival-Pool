@@ -11,7 +11,7 @@ export default function ResponsibleGamingPage() {
           <h1 className="text-3xl font-black text-white">Responsible Gaming</h1>
         </div>
         <p className="text-gray-400">
-          SurvivorPicks is committed to providing a safe and fun experience. Playing should be entertaining — if it stops being fun, we want to help.
+          Sharpr is committed to providing a safe and fun experience. Playing should be entertaining — if it stops being fun, we want to help.
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export default function ResponsibleGamingPage() {
               <div>
                 <h3 className="font-bold text-white mb-1">Play for Fun</h3>
                 <p className="text-sm text-gray-400">
-                  All contests on SurvivorPicks are free to enter — no purchase is ever required to play. You can claim free daily coins and enter any contest without spending money. If you ever feel pressure to spend, step back and use our free-play options.
+                  All contests on Sharpr are free to enter — no purchase is ever required to play. You can claim free daily coins and enter any contest without spending money. If you ever feel pressure to spend, step back and use our free-play options.
                 </p>
               </div>
             </CardBody>
@@ -174,10 +174,10 @@ export default function ResponsibleGamingPage() {
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-3">
         <h2 className="text-lg font-bold text-white">Our Commitment</h2>
         <div className="text-sm text-gray-300 space-y-2 leading-relaxed">
-          <p>SurvivorPicks enforces an 18+ age requirement on all accounts. We do not market to minors and do not allow underage participation.</p>
+          <p>Sharpr enforces an 18+ age requirement on all accounts. We do not market to minors and do not allow underage participation.</p>
           <p>Our sweepstakes model is designed so that no purchase is ever required to play. Free Alternate Method of Entry (AMOE) ensures everyone has equal access to Sweeps Coins regardless of spending.</p>
           <p>We honor all self-exclusion requests immediately with no waiting period. Permanent self-exclusions are irrevocable for a minimum of 5 years.</p>
-          <p>If you believe someone is using SurvivorPicks in a manner harmful to themselves, please contact us at <span className="text-green-400">legal@survivorpicks.com</span>.</p>
+          <p>If you believe someone is using Sharpr in a manner harmful to themselves, please contact us at <span className="text-green-400">legal@survivorpicks.com</span>.</p>
         </div>
       </section>
     </div>

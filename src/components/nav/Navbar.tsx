@@ -31,7 +31,7 @@ export function Navbar({ profile }: NavbarProps) {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 font-bold text-xl text-white hover:text-green-400 transition-colors">
             <Trophy size={24} className="text-green-500" />
-            <span>SurvivorPicks</span>
+            <span>Sharpr</span>
           </Link>
 
           {/* Desktop Nav */}

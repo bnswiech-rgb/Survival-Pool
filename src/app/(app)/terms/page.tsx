@@ -9,30 +9,30 @@ export default function TermsPage() {
       <div className="prose prose-invert max-w-none space-y-6 text-gray-300 text-sm leading-relaxed">
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">1. Acceptance of Terms</h2>
-          <p>By accessing or using SurvivorPicks ("the Platform"), you agree to be bound by these Terms of Service and all policies incorporated herein. If you do not agree to all of these terms, do not use the Platform. These Terms constitute a binding legal agreement between you and Brehtan Swiech, operating as SurvivorPicks ("we," "us," or "our").</p>
+          <p>By accessing or using Sharpr ("the Platform"), you agree to be bound by these Terms of Service and all policies incorporated herein. If you do not agree to all of these terms, do not use the Platform. These Terms constitute a binding legal agreement between you and Brehtan Swiech, operating as Sharpr ("we," "us," or "our").</p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">2. Beta Notice</h2>
-          <p>SurvivorPicks is currently in beta. The Platform is provided "as is" without any warranties of any kind. Features may change, be unavailable, or contain errors. We are not liable for any losses arising from use of the Platform during beta.</p>
+          <p>Sharpr is currently in beta. The Platform is provided "as is" without any warranties of any kind. Features may change, be unavailable, or contain errors. We are not liable for any losses arising from use of the Platform during beta.</p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">3. Eligibility</h2>
           <p>You must be at least 18 years of age to use this Platform. By registering an account, you represent and warrant that you are 18 years of age or older. The Platform is void where prohibited by law. It is your sole responsibility to determine whether your use of the Platform is lawful in your jurisdiction. We reserve the right to restrict access from any location at any time.</p>
-          <p>Employees, officers, and directors of SurvivorPicks and members of their immediate families are not eligible to participate in any contest with prizes.</p>
+          <p>Employees, officers, and directors of Sharpr and members of their immediate families are not eligible to participate in any contest with prizes.</p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">4. Nature of the Platform — Sweepstakes Model</h2>
-          <p>SurvivorPicks operates under a sweepstakes promotional model. No purchase, payment, or coin balance is necessary to enter or win. A free Alternate Method of Entry (AMOE) is always available. See our <a href="/sweepstakes-rules" className="text-green-400 hover:text-green-300">Official Sweepstakes Rules</a> for complete details.</p>
+          <p>Sharpr operates under a sweepstakes promotional model. No purchase, payment, or coin balance is necessary to enter or win. A free Alternate Method of Entry (AMOE) is always available. See our <a href="/sweepstakes-rules" className="text-green-400 hover:text-green-300">Official Sweepstakes Rules</a> for complete details.</p>
           <p>The Platform uses two virtual currency types:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li><strong className="text-white">Gold Coins (GC):</strong> Virtual currency with no cash value, used for entertainment play only. Gold Coins cannot be redeemed for prizes.</li>
             <li><strong className="text-white">Sweeps Coins (SC):</strong> Promotional sweepstakes entries that can be redeemed for prizes per the Official Sweepstakes Rules. Sweeps Coins are obtained for free through daily bonuses, AMOE requests, and promotional giveaways — never by direct purchase.</li>
           </ul>
           <p>Purchasing Gold Coins does not provide any direct advantage in sweepstakes outcomes. All sweepstakes participation is governed by chance and skill-based pick results, not by coin purchases.</p>
-          <p>SurvivorPicks is NOT a sportsbook. No wagering occurs on the Platform.</p>
+          <p>Sharpr is NOT a sportsbook. No wagering occurs on the Platform.</p>
         </section>
 
         <section className="space-y-3">
@@ -60,7 +60,7 @@ export default function TermsPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">9. Intellectual Property</h2>
-          <p>All content on the Platform, including but not limited to the name "SurvivorPicks," logos, designs, and software, is owned by or licensed to SurvivorPicks and is protected by applicable intellectual property laws. You may not reproduce, distribute, or create derivative works without our express written permission.</p>
+          <p>All content on the Platform, including but not limited to the name "Sharpr," logos, designs, and software, is owned by or licensed to Sharpr and is protected by applicable intellectual property laws. You may not reproduce, distribute, or create derivative works without our express written permission.</p>
         </section>
 
         <section className="space-y-3">
@@ -70,18 +70,18 @@ export default function TermsPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">11. Limitation of Liability</h2>
-          <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, SURVIVORPICKS AND BREHTAN SWIECH SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, OR GOODWILL, ARISING FROM OR RELATED TO YOUR USE OF OR INABILITY TO USE THE PLATFORM, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. OUR TOTAL LIABILITY SHALL NOT EXCEED THE GREATER OF $100 OR THE AMOUNT YOU PAID US IN THE PAST 12 MONTHS.</p>
+          <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, SHARPR AND BREHTAN SWIECH SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, OR GOODWILL, ARISING FROM OR RELATED TO YOUR USE OF OR INABILITY TO USE THE PLATFORM, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. OUR TOTAL LIABILITY SHALL NOT EXCEED THE GREATER OF $100 OR THE AMOUNT YOU PAID US IN THE PAST 12 MONTHS.</p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">12. Indemnification</h2>
-          <p>You agree to indemnify, defend, and hold harmless SurvivorPicks and Brehtan Swiech from and against any claims, liabilities, damages, judgments, awards, losses, costs, and expenses (including reasonable attorneys' fees) arising out of or relating to your violation of these Terms or your use of the Platform.</p>
+          <p>You agree to indemnify, defend, and hold harmless Sharpr and Brehtan Swiech from and against any claims, liabilities, damages, judgments, awards, losses, costs, and expenses (including reasonable attorneys' fees) arising out of or relating to your violation of these Terms or your use of the Platform.</p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">13. Governing Law and Dispute Resolution</h2>
           <p>These Terms shall be governed by the laws of the State of Illinois, without regard to conflict of law principles. Any dispute arising from these Terms shall be resolved by binding arbitration in accordance with the American Arbitration Association's Consumer Arbitration Rules, except that either party may seek injunctive relief in a court of competent jurisdiction.</p>
-          <p>YOU AND SURVIVORPICKS AGREE THAT EACH MAY BRING CLAIMS AGAINST THE OTHER ONLY IN YOUR OR ITS INDIVIDUAL CAPACITY AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS OR REPRESENTATIVE PROCEEDING.</p>
+          <p>YOU AND SHARPR AGREE THAT EACH MAY BRING CLAIMS AGAINST THE OTHER ONLY IN YOUR OR ITS INDIVIDUAL CAPACITY AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS OR REPRESENTATIVE PROCEEDING.</p>
         </section>
 
         <section className="space-y-3">

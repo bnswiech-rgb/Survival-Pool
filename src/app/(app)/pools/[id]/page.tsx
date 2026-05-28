@@ -83,37 +83,58 @@ export default async function PoolDetailPage({ params }: Props) {
 
   if (!pool || pool.status === 'canceled') notFound();
 
-  // Auto-heal: if pool is open/active but has no open round, fix it
-  if (!currentRound && pool.status !== 'completed' && pool.status !== 'canceled') {
-    const safeDeadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  // Auto-heal: ensure every active pool always has a pickable open round
+  if (pool.status !== 'completed' && pool.status !== 'canceled') {
+    // Find the next game date for this sport via ESPN
+    async function getNextGameDeadline(sport: string): Promise<string> {
+      const sportMap: Record<string, { espnSport: string; espnLeague: string }> = {
+        NBA: { espnSport: 'basketball', espnLeague: 'nba' },
+        WNBA: { espnSport: 'basketball', espnLeague: 'wnba' },
+        MLB: { espnSport: 'baseball', espnLeague: 'mlb' },
+        NHL: { espnSport: 'hockey', espnLeague: 'nhl' },
+        NFL: { espnSport: 'football', espnLeague: 'nfl' },
+      };
+      const mapping = sportMap[sport];
+      if (mapping) {
+        for (let offset = 0; offset <= 7; offset++) {
+          const d = new Date(Date.now() + offset * 24 * 60 * 60 * 1000);
+          const dateStr = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+          try {
+            const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${mapping.espnSport}/${mapping.espnLeague}/scoreboard?dates=${dateStr}`, { cache: 'no-store' });
+            if (!res.ok) continue;
+            const data = await res.json();
+            if (Array.isArray(data?.events) && data.events.length > 0) {
+              // 11:59 PM ET on this date = 03:59 UTC next day
+              return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 3, 59, 0, 0)).toISOString();
+            }
+          } catch { continue; }
+        }
+      }
+      // Fallback: 7 days from now
+      return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    }
 
-    // Check if a round exists but has a past deadline (stuck)
-    const { data: stuckRound } = await supabase
-      .from('rounds')
-      .select('*')
-      .eq('pool_id', id)
-      .eq('status', 'open')
-      .order('round_number', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (stuckRound && new Date(stuckRound.deadline) < new Date()) {
-      // Round exists but deadline is past — push deadline forward 24h
-      await supabase.from('rounds').update({ deadline: safeDeadline }).eq('id', stuckRound.id);
-      (currentRound as any) = { ...stuckRound, deadline: safeDeadline };
-    } else if (!stuckRound) {
-      // No rounds at all — check for any round
-      const { data: anyRound } = await supabase
+    if (!currentRound) {
+      // Find any existing round for this pool
+      const { data: existingRound } = await supabase
         .from('rounds')
-        .select('id')
+        .select('*')
         .eq('pool_id', id)
+        .order('round_number', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (!anyRound) {
+      if (existingRound) {
+        // Round exists but isn't open or has past deadline — reopen it with correct deadline
+        const deadline = await getNextGameDeadline(pool.sport);
+        await supabase.from('rounds').update({ status: 'open', deadline }).eq('id', existingRound.id);
+        (currentRound as any) = { ...existingRound, status: 'open', deadline };
+      } else {
+        // No rounds at all — create round 1
+        const deadline = await getNextGameDeadline(pool.sport);
         const { data: newRound } = await supabase
           .from('rounds')
-          .insert({ pool_id: id, round_number: 1, deadline: safeDeadline, status: 'open' })
+          .insert({ pool_id: id, round_number: 1, deadline, status: 'open' })
           .select()
           .single();
         if (newRound) (currentRound as any) = newRound;

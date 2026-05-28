@@ -25,6 +25,7 @@ export default async function PoolsPage({ searchParams }: Props) {
     .from('pools')
     .select('*, pool_participants(user_id, team_id, current_streak, status, wins, losses, profiles(username))')
     .eq('visibility', 'public')
+    .neq('status', 'canceled')
     .order('created_at', { ascending: false });
 
   if (params.sport && params.sport !== 'All') query = query.eq('sport', params.sport);

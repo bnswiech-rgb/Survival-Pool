@@ -81,7 +81,7 @@ export default async function PoolDetailPage({ params }: Props) {
     currentRoundGradedPicks = gradedPicks ?? [];
   }
 
-  if (!pool) notFound();
+  if (!pool || pool.status === 'canceled') notFound();
 
   let myParticipation = null;
   let myPick = null;

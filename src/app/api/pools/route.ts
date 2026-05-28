@@ -142,6 +142,15 @@ export async function POST(request: NextRequest) {
     firstRoundDeadline = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2] + 1, 1, 30, 0, 0)); // 9:30 PM ET
   }
 
+  // Safety: if deadline is already in the past, push to 9:30 PM ET tomorrow
+  if (firstRoundDeadline <= now) {
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    firstRoundDeadline = new Date(Date.UTC(tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate() + 1, 1, 30, 0, 0));
+    console.log(`[create pool] deadline was in past, pushed to: ${firstRoundDeadline.toISOString()}`);
+  }
+
+  console.log(`[create pool] firstRoundDeadline: ${firstRoundDeadline.toISOString()}, now: ${now.toISOString()}`);
+
   const { error: roundError } = await supabase.from('rounds').insert({
     pool_id: pool.id,
     round_number: 1,
@@ -151,7 +160,6 @@ export async function POST(request: NextRequest) {
 
   if (roundError) {
     console.error('Failed to create first round:', roundError.message);
-    // Don't block — pool is created, admin can manually create round
   }
 
   // Log activity

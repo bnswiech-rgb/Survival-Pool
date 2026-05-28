@@ -116,30 +116,38 @@ export default async function PoolDetailPage({ params }: Props) {
       return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     }
 
-    if (!currentRound) {
-      // Find any existing round for this pool
-      const { data: existingRound } = await supabase
-        .from('rounds')
-        .select('*')
-        .eq('pool_id', id)
-        .order('round_number', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existingRound) {
-        // Round exists but isn't open or has past deadline — reopen it with correct deadline
+    const roundNeedsHeal = !currentRound || new Date(currentRound.deadline) < new Date();
+    if (roundNeedsHeal) {
+      if (currentRound) {
+        // Round exists but deadline has passed — update it with a future deadline
         const deadline = await getNextGameDeadline(pool.sport);
-        await supabase.from('rounds').update({ status: 'open', deadline }).eq('id', existingRound.id);
-        currentRound = { ...existingRound, status: 'open', deadline };
+        await supabase.from('rounds').update({ status: 'open', deadline }).eq('id', currentRound.id);
+        currentRound = { ...currentRound, status: 'open', deadline };
       } else {
-        // No rounds at all — create round 1
-        const deadline = await getNextGameDeadline(pool.sport);
-        const { data: newRound } = await supabase
+        // No open round — find any existing round for this pool
+        const { data: existingRound } = await supabase
           .from('rounds')
-          .insert({ pool_id: id, round_number: 1, deadline, status: 'open' })
-          .select()
-          .single();
-        if (newRound) currentRound = newRound;
+          .select('*')
+          .eq('pool_id', id)
+          .order('round_number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingRound) {
+          // Round exists but isn't open or has past deadline — reopen it with correct deadline
+          const deadline = await getNextGameDeadline(pool.sport);
+          await supabase.from('rounds').update({ status: 'open', deadline }).eq('id', existingRound.id);
+          currentRound = { ...existingRound, status: 'open', deadline };
+        } else {
+          // No rounds at all — create round 1
+          const deadline = await getNextGameDeadline(pool.sport);
+          const { data: newRound } = await supabase
+            .from('rounds')
+            .insert({ pool_id: id, round_number: 1, deadline, status: 'open' })
+            .select()
+            .single();
+          if (newRound) currentRound = newRound;
+        }
       }
     }
   }

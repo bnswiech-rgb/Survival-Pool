@@ -116,9 +116,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Fetch ESPN scoreboard for NBA totals fallback (over/under when odds API doesn't have them)
-  // Queries today + next 3 days to cover games the odds API is missing totals for
-  const espnTotalsMap = new Map<string, number>();
+  // Fetch ESPN scoreboard for NBA totals fallback (over/under + actual odds when odds API is missing them)
+  // Key: "homeLast_awayLast" (last word of each team name, lowercased) -> { overUnder, overOdds, underOdds }
+  const espnTotalsMap = new Map<string, { overUnder: number; overOdds: number; underOdds: number }>();
   try {
     const now = new Date();
     const datesToCheck = [0, 1, 2, 3].map(offset => {
@@ -140,9 +140,16 @@ export async function GET(request: NextRequest) {
           if (!odds?.overUnder) continue;
           const overUnder = parseFloat(odds.overUnder);
           if (isNaN(overUnder)) continue;
-          for (const comp of competition.competitors ?? []) {
-            const lastName = (comp.team?.displayName ?? comp.team?.name ?? '').split(' ').pop()?.toLowerCase();
-            if (lastName) espnTotalsMap.set(lastName, overUnder);
+          const overOdds = parseInt(odds.total?.over?.close?.odds ?? odds.total?.over?.open?.odds ?? '-110');
+          const underOdds = parseInt(odds.total?.under?.close?.odds ?? odds.total?.under?.open?.odds ?? '-110');
+          const competitors: any[] = competition.competitors ?? [];
+          const home = competitors.find((c: any) => c.homeAway === 'home');
+          const away = competitors.find((c: any) => c.homeAway === 'away');
+          const homeLast = (home?.team?.displayName ?? '').split(' ').pop()?.toLowerCase();
+          const awayLast = (away?.team?.displayName ?? '').split(' ').pop()?.toLowerCase();
+          if (homeLast && awayLast) {
+            const key = `${homeLast}_${awayLast}`;
+            espnTotalsMap.set(key, { overUnder, overOdds: isNaN(overOdds) ? -110 : overOdds, underOdds: isNaN(underOdds) ? -110 : underOdds });
           }
         }
       } catch { continue; }
@@ -195,11 +202,12 @@ export async function GET(request: NextRequest) {
       } else {
         // Fallback: use ESPN over/under if odds API didn't return totals
         const homeLast = game.home_team.split(' ').pop()?.toLowerCase();
-        const overUnder = homeLast ? espnTotalsMap.get(homeLast) : null;
-        if (overUnder) {
+        const awayLast = game.away_team.split(' ').pop()?.toLowerCase();
+        const espnTotal = homeLast && awayLast ? espnTotalsMap.get(`${homeLast}_${awayLast}`) : null;
+        if (espnTotal) {
           picks.push(
-            { type: 'total', team: 'Over', line: `Over ${overUnder}`, odds: -110, label: `Over ${overUnder}` },
-            { type: 'total', team: 'Under', line: `Under ${overUnder}`, odds: -110, label: `Under ${overUnder}` },
+            { type: 'total', team: 'Over', line: `Over ${espnTotal.overUnder}`, odds: espnTotal.overOdds, label: `Over ${espnTotal.overUnder}` },
+            { type: 'total', team: 'Under', line: `Under ${espnTotal.overUnder}`, odds: espnTotal.underOdds, label: `Under ${espnTotal.overUnder}` },
           );
         }
       }

@@ -9,7 +9,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { data: pool } = await supabase.from('pools').select('*').eq('id', id).single();
   if (!pool) return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
-  const joinableStatuses = (pool.contest_format === 'streak_race' || pool.contest_format === 'team_battle')
+  const joinableStatuses = (pool.contest_format === 'streak_race' || pool.contest_format === 'team_battle' || pool.round_frequency === 'game_day')
     ? ['open', 'upcoming', 'active']
     : ['open', 'upcoming'];
   if (!joinableStatuses.includes(pool.status)) {

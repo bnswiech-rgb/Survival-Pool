@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
 
   // Fetch ESPN scoreboard for NBA totals fallback (over/under + actual odds when odds API is missing them)
   // Key: "homeLast_awayLast" (last word of each team name, lowercased) -> { overUnder, overOdds, underOdds }
-  const espnTotalsMap = new Map<string, { overUnder: number; overOdds: number; underOdds: number }>();
+  const espnTotalsMap = new Map<string, { overUnder: number; overOdds: number; underOdds: number } | undefined>();
   try {
     const now = new Date();
     const datesToCheck = [0, 1, 2, 3].map(offset => {
@@ -140,16 +140,22 @@ export async function GET(request: NextRequest) {
           if (!odds?.overUnder) continue;
           const overUnder = parseFloat(odds.overUnder);
           if (isNaN(overUnder)) continue;
-          const overOdds = parseInt(odds.total?.over?.close?.odds ?? odds.total?.over?.open?.odds ?? '-110');
-          const underOdds = parseInt(odds.total?.under?.close?.odds ?? odds.total?.under?.open?.odds ?? '-110');
+          const overOddsRaw = odds.total?.over?.close?.odds ?? odds.total?.over?.open?.odds ?? '-110';
+          const underOddsRaw = odds.total?.under?.close?.odds ?? odds.total?.under?.open?.odds ?? '-110';
+          const overOdds = parseInt(String(overOddsRaw)) || -110;
+          const underOdds = parseInt(String(underOddsRaw)) || -110;
+          const entry = { overUnder, overOdds, underOdds };
           const competitors: any[] = competition.competitors ?? [];
-          const home = competitors.find((c: any) => c.homeAway === 'home');
-          const away = competitors.find((c: any) => c.homeAway === 'away');
-          const homeLast = (home?.team?.displayName ?? '').split(' ').pop()?.toLowerCase();
-          const awayLast = (away?.team?.displayName ?? '').split(' ').pop()?.toLowerCase();
-          if (homeLast && awayLast) {
-            const key = `${homeLast}_${awayLast}`;
-            espnTotalsMap.set(key, { overUnder, overOdds: isNaN(overOdds) ? -110 : overOdds, underOdds: isNaN(underOdds) ? -110 : underOdds });
+          // Store under every combination of team name last words so lookup always hits
+          const lastWords = competitors.map((c: any) =>
+            (c.team?.displayName ?? c.team?.name ?? '').split(' ').pop()?.toLowerCase()
+          ).filter(Boolean);
+          // Store keyed by each individual team last word too (fallback)
+          for (const w of lastWords) espnTotalsMap.set(w as string, entry);
+          // Store keyed by sorted pair for precise match
+          if (lastWords.length >= 2) {
+            espnTotalsMap.set(`${lastWords[0]}_${lastWords[1]}`, entry);
+            espnTotalsMap.set(`${lastWords[1]}_${lastWords[0]}`, entry);
           }
         }
       } catch { continue; }
@@ -203,7 +209,9 @@ export async function GET(request: NextRequest) {
         // Fallback: use ESPN over/under if odds API didn't return totals
         const homeLast = game.home_team.split(' ').pop()?.toLowerCase();
         const awayLast = game.away_team.split(' ').pop()?.toLowerCase();
-        const espnTotal = homeLast && awayLast ? espnTotalsMap.get(`${homeLast}_${awayLast}`) : null;
+        const espnTotal = (homeLast && awayLast)
+          ? (espnTotalsMap.get(`${homeLast}_${awayLast}`) ?? espnTotalsMap.get(homeLast) ?? espnTotalsMap.get(awayLast ?? ''))
+          : null;
         if (espnTotal) {
           picks.push(
             { type: 'total', team: 'Over', line: `Over ${espnTotal.overUnder}`, odds: espnTotal.overOdds, label: `Over ${espnTotal.overUnder}` },

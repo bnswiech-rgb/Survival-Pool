@@ -67,17 +67,23 @@ export async function GET(request: NextRequest) {
   const todayOnly = searchParams.get('today_only') === 'true';
   let { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(startDate, deadline);
 
-  // For team_battle pools: cap window to end of today (midnight ET tonight)
+  // For team_battle pools: only show games starting today (ET).
+  // Override tomorrowEnd to midnight ET tonight regardless of deadline.
   if (todayOnly) {
     const now = new Date();
-    const etOffset = -4 * 60; // EDT; close enough year-round for day boundary
-    const nowET = new Date(now.getTime() + etOffset * 60000);
-    // End of today in ET = next midnight UTC-4
-    const endOfTodayET = new Date(Date.UTC(
+    // Convert now to ET (EDT = UTC-4)
+    const nowET = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+    // Midnight at the end of today ET = start of tomorrow ET = UTC date tomorrow at 04:00
+    tomorrowEnd = new Date(Date.UTC(
       nowET.getUTCFullYear(), nowET.getUTCMonth(), nowET.getUTCDate() + 1,
-      4, 0, 0, 0 // midnight ET = 04:00 UTC
+      4, 0, 0, 0
     ));
-    if (endOfTodayET < tomorrowEnd) tomorrowEnd = endOfTodayET;
+    // Also move tomorrowStart to start of today ET if it's somehow in the future
+    const startOfTodayET = new Date(Date.UTC(
+      nowET.getUTCFullYear(), nowET.getUTCMonth(), nowET.getUTCDate(),
+      4, 0, 0, 0
+    ));
+    if (tomorrowStart > tomorrowEnd) tomorrowStart = startOfTodayET;
   }
 
   const allGames: any[] = [];

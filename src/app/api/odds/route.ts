@@ -117,27 +117,35 @@ export async function GET(request: NextRequest) {
   }
 
   // Fetch ESPN scoreboard for NBA totals fallback (over/under when odds API doesn't have them)
-  // Maps last word of team name (e.g. "Thunder") -> overUnder line
+  // Queries today + next 3 days to cover games the odds API is missing totals for
   const espnTotalsMap = new Map<string, number>();
   try {
-    const espnRes = await fetch(
-      'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
-      { cache: 'no-store' }
-    );
-    if (espnRes.ok) {
-      const espnData = await espnRes.json();
-      for (const event of espnData?.events ?? []) {
-        const competition = event.competitions?.[0];
-        if (!competition) continue;
-        const odds = competition.odds?.[0];
-        if (!odds?.overUnder) continue;
-        const overUnder = parseFloat(odds.overUnder);
-        if (isNaN(overUnder)) continue;
-        for (const comp of competition.competitors ?? []) {
-          const lastName = (comp.team?.displayName ?? comp.team?.name ?? '').split(' ').pop()?.toLowerCase();
-          if (lastName) espnTotalsMap.set(lastName, overUnder);
+    const now = new Date();
+    const datesToCheck = [0, 1, 2, 3].map(offset => {
+      const d = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
+      return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+    });
+    for (const dateStr of datesToCheck) {
+      try {
+        const espnRes = await fetch(
+          `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${dateStr}`,
+          { cache: 'no-store' }
+        );
+        if (!espnRes.ok) continue;
+        const espnData = await espnRes.json();
+        for (const event of espnData?.events ?? []) {
+          const competition = event.competitions?.[0];
+          if (!competition) continue;
+          const odds = competition.odds?.[0];
+          if (!odds?.overUnder) continue;
+          const overUnder = parseFloat(odds.overUnder);
+          if (isNaN(overUnder)) continue;
+          for (const comp of competition.competitors ?? []) {
+            const lastName = (comp.team?.displayName ?? comp.team?.name ?? '').split(' ').pop()?.toLowerCase();
+            if (lastName) espnTotalsMap.set(lastName, overUnder);
+          }
         }
-      }
+      } catch { continue; }
     }
   } catch { /* ESPN fallback is best-effort */ }
 

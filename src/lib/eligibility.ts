@@ -1,10 +1,11 @@
-// Spreads/Totals: must be around -110 (allow -115 to -105 range)
+// Spreads: must be around -110 (allow -115 to -105 range)
 export function isEligibleSpreadPick(americanOdds: number): boolean {
   return americanOdds >= -115 && americanOdds <= -105;
 }
 
+// Totals: allow up to -120 to account for slight juice variance across bookmakers
 export function isEligibleTotalPick(americanOdds: number): boolean {
-  return americanOdds >= -115 && americanOdds <= -105;
+  return americanOdds >= -120 && americanOdds <= -100;
 }
 
 // Moneyline: -150 or BETTER (less negative or positive)

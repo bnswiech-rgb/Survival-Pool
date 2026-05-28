@@ -83,6 +83,32 @@ export default async function PoolDetailPage({ params }: Props) {
 
   if (!pool || pool.status === 'canceled') notFound();
 
+  // Auto-heal: if pool is open/active but has no open round, create one now
+  if (!currentRound && pool.status !== 'completed' && pool.status !== 'canceled') {
+    const { data: anyRound } = await supabase
+      .from('rounds')
+      .select('id')
+      .eq('pool_id', id)
+      .limit(1)
+      .maybeSingle();
+
+    if (!anyRound) {
+      // No rounds at all — create round 1 with a safe deadline
+      const now = new Date();
+      // Default: 11:59 PM ET tonight
+      const deadline = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 3, 59, 0, 0));
+      const { data: newRound } = await supabase
+        .from('rounds')
+        .insert({ pool_id: id, round_number: 1, deadline: deadline.toISOString(), status: 'open' })
+        .select()
+        .single();
+      if (newRound) {
+        // Use newly created round as currentRound
+        (currentRound as any) = newRound;
+      }
+    }
+  }
+
   let myParticipation = null;
   let myPick = null;
   let currentUser = null;

@@ -83,28 +83,40 @@ export default async function PoolDetailPage({ params }: Props) {
 
   if (!pool || pool.status === 'canceled') notFound();
 
-  // Auto-heal: if pool is open/active but has no open round, create one now
+  // Auto-heal: if pool is open/active but has no open round, fix it
   if (!currentRound && pool.status !== 'completed' && pool.status !== 'canceled') {
-    const { data: anyRound } = await supabase
+    const safeDeadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    // Check if a round exists but has a past deadline (stuck)
+    const { data: stuckRound } = await supabase
       .from('rounds')
-      .select('id')
+      .select('*')
       .eq('pool_id', id)
+      .eq('status', 'open')
+      .order('round_number', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (!anyRound) {
-      // No rounds at all — create round 1 with a safe deadline
-      const now = new Date();
-      // Default: 11:59 PM ET tonight
-      const deadline = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 3, 59, 0, 0));
-      const { data: newRound } = await supabase
+    if (stuckRound && new Date(stuckRound.deadline) < new Date()) {
+      // Round exists but deadline is past — push deadline forward 24h
+      await supabase.from('rounds').update({ deadline: safeDeadline }).eq('id', stuckRound.id);
+      (currentRound as any) = { ...stuckRound, deadline: safeDeadline };
+    } else if (!stuckRound) {
+      // No rounds at all — check for any round
+      const { data: anyRound } = await supabase
         .from('rounds')
-        .insert({ pool_id: id, round_number: 1, deadline: deadline.toISOString(), status: 'open' })
-        .select()
-        .single();
-      if (newRound) {
-        // Use newly created round as currentRound
-        (currentRound as any) = newRound;
+        .select('id')
+        .eq('pool_id', id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!anyRound) {
+        const { data: newRound } = await supabase
+          .from('rounds')
+          .insert({ pool_id: id, round_number: 1, deadline: safeDeadline, status: 'open' })
+          .select()
+          .single();
+        if (newRound) (currentRound as any) = newRound;
       }
     }
   }

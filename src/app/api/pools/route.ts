@@ -101,46 +101,58 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Create first round deadline
-  const dateOnly = start_date.substring(0, 10);
-  const startParts = dateOnly.split('-').map(Number);
-
+  // For game_day: find next NBA game via ESPN (reliable, free, no key needed)
+  // For others: 9:30 PM ET on start_date
   let firstRoundDeadline: Date;
+  const now = new Date();
+
   if (isGameDay) {
-    // Query odds API for the earliest upcoming NBA game date, set deadline to 11:59 PM ET that day
     let firstGameDateStr: string | null = null;
-    for (const sportKey of ['basketball_nba', 'basketball_nba_playoffs']) {
-      try {
+    try {
+      // Check today + next 3 days on ESPN scoreboard
+      for (let offset = 0; offset <= 3; offset++) {
+        const d = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
+        const dateStr = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
         const res = await fetch(
-          `https://api.the-odds-api.com/v4/sports/${sportKey}/odds?apiKey=${process.env.ODDS_API_KEY}&regions=us&markets=h2h&oddsFormat=american&dateFormat=iso`,
+          `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${dateStr}`,
           { cache: 'no-store' },
         );
         if (!res.ok) continue;
-        const games = await res.json();
-        if (!Array.isArray(games)) continue;
-        for (const game of games) {
-          const etMs = new Date(game.commence_time).getTime() - 4 * 60 * 60 * 1000;
-          const dateStr = new Date(etMs).toISOString().substring(0, 10);
-          if (!firstGameDateStr || dateStr < firstGameDateStr) firstGameDateStr = dateStr;
+        const data = await res.json();
+        if (Array.isArray(data?.events) && data.events.length > 0) {
+          // Found a game day — use this date
+          firstGameDateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+          break;
         }
-      } catch { continue; }
-    }
+      }
+    } catch { /* fall through to fallback */ }
+
     if (firstGameDateStr) {
       const p = firstGameDateStr.split('-').map(Number);
-      firstRoundDeadline = new Date(Date.UTC(p[0], p[1] - 1, p[2] + 1, 3, 59, 0, 0)); // 11:59 PM ET on game day
+      // 11:59 PM ET on game day = 03:59 UTC next day
+      firstRoundDeadline = new Date(Date.UTC(p[0], p[1] - 1, p[2] + 1, 3, 59, 0, 0));
     } else {
       // Fallback: 11:59 PM ET tomorrow
-      firstRoundDeadline = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2] + 2, 3, 59, 0, 0));
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      firstRoundDeadline = new Date(Date.UTC(tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate() + 1, 3, 59, 0, 0));
     }
   } else {
+    const dateOnly = start_date.substring(0, 10);
+    const startParts = dateOnly.split('-').map(Number);
     firstRoundDeadline = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2] + 1, 1, 30, 0, 0)); // 9:30 PM ET
   }
 
-  await supabase.from('rounds').insert({
+  const { error: roundError } = await supabase.from('rounds').insert({
     pool_id: pool.id,
     round_number: 1,
     deadline: firstRoundDeadline.toISOString(),
     status: 'open',
   });
+
+  if (roundError) {
+    console.error('Failed to create first round:', roundError.message);
+    // Don't block — pool is created, admin can manually create round
+  }
 
   // Log activity
   await supabase.from('admin_actions').insert({

@@ -1,4 +1,29 @@
+'use client';
+import { useState } from 'react';
+import toast from 'react-hot-toast';
+
 export default function SweepstakesRulesPage() {
+  const [claiming, setClaiming] = useState(false);
+  const [claimed, setClaimed] = useState(false);
+
+  const handleDigitalAmoe = async () => {
+    setClaiming(true);
+    try {
+      const res = await fetch('/api/amoe', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to claim.');
+      } else {
+        setClaimed(true);
+        toast.success(`${data.sweeps_awarded} Sweeps Coins added to your account!`);
+      }
+    } catch {
+      toast.error('Something went wrong. Try again.');
+    } finally {
+      setClaiming(false);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
@@ -48,6 +73,25 @@ export default function SweepstakesRulesPage() {
               <p className="mt-2">Limit one AMOE request per outer envelope; one AMOE request per household per day; requests received after the Program ends will not be honored. Allow up to 14 business days for processing. Sponsor is not responsible for lost, late, illegible, or misdirected mail.</p>
             </li>
             <li>
+              <strong className="text-white">Alternate Method of Entry (AMOE) — Digital:</strong> Registered users may submit a digital AMOE request once per calendar day (UTC) to receive 50 SC at no cost. No purchase required. You must be logged in to your Sharpr account.
+              <div className="mt-3 bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                {claimed ? (
+                  <p className="text-green-400 text-sm font-medium">✓ 50 Sweeps Coins have been added to your account for today.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-400">By clicking below, you confirm you are a legal US resident aged 18+, you have a valid Sharpr account, and you are submitting this request in good faith. Limit one per account per day.</p>
+                    <button
+                      onClick={handleDigitalAmoe}
+                      disabled={claiming}
+                      className="bg-green-500 hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed text-black text-sm font-bold px-4 py-2 rounded-lg transition-colors"
+                    >
+                      {claiming ? 'Submitting...' : 'Claim 50 Free Sweeps Coins'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </li>
+            <li>
               <strong className="text-white">Promotional Giveaways:</strong> Sponsor may award Sweeps Coins through promotional giveaways, social media contests, or other marketing activities at its sole discretion.
             </li>
           </ul>
@@ -91,6 +135,7 @@ export default function SweepstakesRulesPage() {
             <li>One account per person. Multiple accounts are prohibited.</li>
             <li>One daily free bonus claim per account per day.</li>
             <li>One AMOE mail-in per household per day.</li>
+            <li>One digital AMOE claim per account per day.</li>
             <li>Redemption requests are subject to a maximum of one per calendar month per user, unless otherwise specified.</li>
           </ul>
         </section>

@@ -108,12 +108,14 @@ export async function GET(request: NextRequest) {
       return t >= tomorrowStart && t < tomorrowEnd;
     })
     .map(game => {
-      const bookmaker = game.bookmakers?.[0];
-      if (!bookmaker) return null;
+      const bookmakers: any[] = game.bookmakers ?? [];
+      if (!bookmakers.length) return null;
 
-      const spreadsMarket = bookmaker.markets?.find((m: any) => m.key === 'spreads');
-      const totalsMarket  = bookmaker.markets?.find((m: any) => m.key === 'totals');
-      const h2hMarket     = bookmaker.markets?.find((m: any) => m.key === 'h2h');
+      // For each market type, find the first bookmaker that has it posted
+      const spreadsMarket = bookmakers.map((b: any) => b.markets?.find((m: any) => m.key === 'spreads')).find(Boolean);
+      const totalsMarket  = bookmakers.map((b: any) => b.markets?.find((m: any) => m.key === 'totals')).find(Boolean);
+      const h2hMarket     = bookmakers.map((b: any) => b.markets?.find((m: any) => m.key === 'h2h')).find(Boolean);
+      const bookmaker = bookmakers[0];
 
       const picks: any[] = [];
 

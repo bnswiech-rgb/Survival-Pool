@@ -96,12 +96,57 @@ function gradePick(
   return 'lost';
 }
 
+// Finds the earliest upcoming NBA game date and returns 8 PM ET deadline on that day.
+// Used for game_day pools (e.g. NBA playoffs) so rounds only open when games are scheduled.
+async function getNextNBAGameDayDeadline(): Promise<Date | null> {
+  const now = new Date();
+  const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  let earliestDateStr: string | null = null;
+
+  for (const sportKey of ['basketball_nba', 'basketball_nba_playoffs']) {
+    try {
+      const res = await fetch(
+        `https://api.the-odds-api.com/v4/sports/${sportKey}/odds?apiKey=${process.env.ODDS_API_KEY}&regions=us&markets=h2h&oddsFormat=american&dateFormat=iso`,
+        { cache: 'no-store' },
+      );
+      if (!res.ok) continue;
+      const games = await res.json();
+      if (!Array.isArray(games)) continue;
+      for (const game of games) {
+        const t = new Date(game.commence_time);
+        if (t < nowUTC) continue;
+        // Convert to ET date (EDT = UTC-4)
+        const etMs = t.getTime() - 4 * 60 * 60 * 1000;
+        const etDate = new Date(etMs);
+        const dateStr = etDate.toISOString().substring(0, 10);
+        if (!earliestDateStr || dateStr < earliestDateStr) earliestDateStr = dateStr;
+      }
+    } catch { continue; }
+  }
+
+  if (!earliestDateStr) return null;
+
+  // Deadline = 8 PM ET on game day. EDT = UTC-4, so 8 PM ET = midnight UTC next day.
+  const parts = earliestDateStr.split('-').map(Number);
+  return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + 1, 0, 0, 0, 0));
+}
+
 async function getNextRoundDeadline(frequency: string): Promise<Date> {
   if (frequency === 'weekly') {
     const d = new Date();
     d.setDate(d.getDate() + 7);
     d.setHours(21, 30, 0, 0);
     return d;
+  }
+
+  if (frequency === 'game_day') {
+    const deadline = await getNextNBAGameDayDeadline();
+    if (deadline) return deadline;
+    // Fallback: 8 PM ET tomorrow if no games found yet
+    const fallback = new Date();
+    fallback.setUTCDate(fallback.getUTCDate() + 1);
+    fallback.setUTCHours(0, 0, 0, 0);
+    return fallback;
   }
 
   try {

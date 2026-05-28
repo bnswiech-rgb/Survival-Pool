@@ -49,7 +49,7 @@ export default function CreatePoolPage() {
 
   // Step 4: Schedule
   const [startDate, setStartDate] = useState('');
-  const roundFrequency = 'daily';
+  const [roundFrequency, setRoundFrequency] = useState<'daily' | 'weekly' | 'game_day'>('daily');
 
   // Step 5: Rules
   const [pushRule, setPushRule] = useState<'advance' | 'eliminate' | 'repeat'>('advance');
@@ -265,6 +265,26 @@ export default function CreatePoolPage() {
               required
               hint="Picks are due by 9:30 PM ET on the start date"
             />
+            <div className="space-y-2">
+              <label className="text-sm text-gray-400">Round Frequency</label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: 'daily', label: 'Daily', desc: 'New round every day' },
+                  { value: 'weekly', label: 'Weekly', desc: 'New round every week' },
+                  { value: 'game_day', label: 'Game Day', desc: 'Auto-schedules when NBA games are on' },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setRoundFrequency(opt.value)}
+                    className={`p-3 rounded-lg border text-left transition-colors ${roundFrequency === opt.value ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
+                  >
+                    <div className="text-sm font-medium text-white">{opt.label}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </CardBody>
         </Card>
       )}

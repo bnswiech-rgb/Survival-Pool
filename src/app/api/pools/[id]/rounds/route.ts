@@ -33,7 +33,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const computedDeadline = deadline ?? (() => {
     const d = new Date();
     if (pool.round_frequency === 'weekly') d.setDate(d.getDate() + 7);
-    else d.setDate(d.getDate() + 1);
+    else if (pool.round_frequency === 'game_day') {
+      // For game_day pools, default to 8 PM ET tomorrow (midnight UTC) as a safe fallback
+      d.setUTCDate(d.getUTCDate() + 1);
+      d.setUTCHours(0, 0, 0, 0);
+    } else d.setDate(d.getDate() + 1);
     return d.toISOString();
   })();
 

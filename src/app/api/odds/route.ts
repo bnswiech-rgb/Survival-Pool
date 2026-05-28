@@ -7,7 +7,7 @@ const SPORT_KEYS: Record<string, string[]> = {
   NBA:  ['basketball_nba'],
   WNBA: ['basketball_wnba'],
   MLB:  ['baseball_mlb'],
-  NHL:  ['icehockey_nhl'],
+  NHL:  ['icehockey_nhl', 'icehockey_nhl_playoffs'],
   ATP:  [
     'tennis_atp_french_open',
     'tennis_atp_wimbledon',
@@ -64,7 +64,21 @@ export async function GET(request: NextRequest) {
   const keysToFetch = sport === 'All' ? ALL_KEYS : (SPORT_KEYS[sport] ?? ALL_KEYS);
   const startDate = searchParams.get('start') ?? undefined;
   const deadline = searchParams.get('deadline') ?? undefined;
-  const { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(startDate, deadline);
+  const todayOnly = searchParams.get('today_only') === 'true';
+  let { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(startDate, deadline);
+
+  // For team_battle pools: cap window to end of today (midnight ET tonight)
+  if (todayOnly) {
+    const now = new Date();
+    const etOffset = -4 * 60; // EDT; close enough year-round for day boundary
+    const nowET = new Date(now.getTime() + etOffset * 60000);
+    // End of today in ET = next midnight UTC-4
+    const endOfTodayET = new Date(Date.UTC(
+      nowET.getUTCFullYear(), nowET.getUTCMonth(), nowET.getUTCDate() + 1,
+      4, 0, 0, 0 // midnight ET = 04:00 UTC
+    ));
+    if (endOfTodayET < tomorrowEnd) tomorrowEnd = endOfTodayET;
+  }
 
   const allGames: any[] = [];
 
@@ -100,7 +114,7 @@ export async function GET(request: NextRequest) {
       if (spreadsMarket) {
         for (const outcome of spreadsMarket.outcomes) {
           const odds = Math.round(outcome.price);
-          if (odds >= -115 && odds <= -105) {
+          if (odds >= -145 && odds <= -100) {
             picks.push({
               type: 'spread',
               team: outcome.name,
@@ -115,7 +129,7 @@ export async function GET(request: NextRequest) {
       if (totalsMarket) {
         for (const outcome of totalsMarket.outcomes) {
           const odds = Math.round(outcome.price);
-          if (odds >= -115 && odds <= -105) {
+          if (odds >= -145 && odds <= -100) {
             picks.push({
               type: 'total',
               team: outcome.name,

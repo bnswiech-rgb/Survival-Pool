@@ -72,7 +72,7 @@ export interface Pool {
   max_entries: number | null;
   start_date: string;
   pick_deadline: string;
-  round_frequency: 'daily' | 'weekly';
+  round_frequency: 'daily' | 'weekly' | 'game_day';
   status: PoolStatus;
   visibility: 'public' | 'private';
   invite_code: string;

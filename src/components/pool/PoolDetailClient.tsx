@@ -205,7 +205,7 @@ export function PoolDetailClient({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to join');
       toast.success('Successfully joined the contest!');
-      setMyParticipation(data.participant);
+      window.location.reload();
     } catch (e: any) {
       toast.error(e.message);
     }

@@ -38,6 +38,8 @@ export default async function PoolDetailPage({ params }: Props) {
       .maybeSingle(),
   ]);
 
+  let currentRound = currentRoundData ?? null;
+
   // For team_battle pools, fetch user_ids who have submitted any pick this round
   // (just IDs — no pick details — so teammates can see who is locked in)
   let submittedPickUserIds: string[] = [];
@@ -80,8 +82,6 @@ export default async function PoolDetailPage({ params }: Props) {
       .neq('status', 'pending');
     currentRoundGradedPicks = gradedPicks ?? [];
   }
-
-  let currentRound = currentRoundData ?? null;
 
   if (!pool || pool.status === 'canceled') notFound();
 

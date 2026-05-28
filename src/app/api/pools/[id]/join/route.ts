@@ -26,15 +26,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Contest is full' }, { status: 400 });
   }
 
-  // $5,000 max prize pool per contest (NY/FL sweepstakes compliance)
-  const MAX_PRIZE_POOL = 500_000;
+  // $4,999 max prize pool per contest — stays under FL §849.094 $5,000 filing threshold
+  const MAX_PRIZE_POOL = 499_900;
   const rake = pool.rake_percentage ?? 10;
   const newCount = (currentCount ?? 0) + 1;
   if ((pool.entry_fee_coins ?? 0) > 0 || pool.entry_fee_cents > 0) {
     const netCoins = Math.round((pool.entry_fee_coins ?? 0) * newCount * (1 - rake / 100));
     const netCents = Math.round(pool.entry_fee_cents * newCount * (1 - rake / 100));
     if (netCoins > MAX_PRIZE_POOL || netCents > MAX_PRIZE_POOL) {
-      return NextResponse.json({ error: 'This contest has reached its maximum prize pool of $5,000.' }, { status: 400 });
+      return NextResponse.json({ error: 'This contest has reached its maximum prize pool of $4,999.' }, { status: 400 });
     }
   }
 

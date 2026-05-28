@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  // $5,000 max prize pool per contest (NY/FL sweepstakes compliance)
-  const MAX_PRIZE_POOL = 500_000;
+  // $4,999 max prize pool per contest — stays under FL §849.094 $5,000 filing threshold
+  const MAX_PRIZE_POOL = 499_900;
   const feeCoins = entry_fee_coins ?? 0;
   const feeCents = entry_fee_cents ?? 0;
   const rake = rake_percentage ?? 10;
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     const netCents  = Math.round(feeCents  * max_entries * (1 - rake / 100));
     if (netCoins > MAX_PRIZE_POOL || netCents > MAX_PRIZE_POOL) {
       return NextResponse.json({
-        error: `Prize pool cannot exceed $5,000 per contest. Lower the entry fee or reduce max entries.`,
+        error: `Prize pool cannot exceed $4,999 per contest. Lower the entry fee or reduce max entries.`,
       }, { status: 400 });
     }
   }

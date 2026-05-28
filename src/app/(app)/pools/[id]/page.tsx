@@ -118,14 +118,18 @@ export default async function PoolDetailPage({ params }: Props) {
 
     const roundNeedsHeal = !currentRound || new Date(currentRound.deadline) < new Date();
     if (roundNeedsHeal) {
+      const healClient = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      );
       if (currentRound) {
         // Round exists but deadline has passed — update it with a future deadline
         const deadline = await getNextGameDeadline(pool.sport);
-        await supabase.from('rounds').update({ status: 'open', deadline }).eq('id', currentRound.id);
+        await healClient.from('rounds').update({ status: 'open', deadline }).eq('id', currentRound.id);
         currentRound = { ...currentRound, status: 'open', deadline };
       } else {
         // No open round — find any existing round for this pool
-        const { data: existingRound } = await supabase
+        const { data: existingRound } = await healClient
           .from('rounds')
           .select('*')
           .eq('pool_id', id)
@@ -136,12 +140,12 @@ export default async function PoolDetailPage({ params }: Props) {
         if (existingRound) {
           // Round exists but isn't open or has past deadline — reopen it with correct deadline
           const deadline = await getNextGameDeadline(pool.sport);
-          await supabase.from('rounds').update({ status: 'open', deadline }).eq('id', existingRound.id);
+          await healClient.from('rounds').update({ status: 'open', deadline }).eq('id', existingRound.id);
           currentRound = { ...existingRound, status: 'open', deadline };
         } else {
           // No rounds at all — create round 1
           const deadline = await getNextGameDeadline(pool.sport);
-          const { data: newRound } = await supabase
+          const { data: newRound } = await healClient
             .from('rounds')
             .insert({ pool_id: id, round_number: 1, deadline, status: 'open' })
             .select()

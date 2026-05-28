@@ -324,8 +324,13 @@ export function PoolDetailClient({
       setSavingSettings(false);
     }
   }
-  const isRoundLocked = !initialCurrentRound || initialCurrentRound.status !== 'open' || new Date(initialCurrentRound.deadline) < new Date();
-  const canSubmitPick = myParticipation && (myParticipation.status === 'active' || myParticipation.status === 'advanced') && !isRoundLocked;
+  // Round is locked only if: deadline passed OR status isn't open
+  // If there's no round at all, that's a separate state — don't treat it as "locked"
+  const isRoundLocked = initialCurrentRound
+    ? (initialCurrentRound.status !== 'open' || new Date(initialCurrentRound.deadline) < new Date())
+    : true;
+  const hasActiveRound = !!initialCurrentRound;
+  const canSubmitPick = myParticipation && (myParticipation.status === 'active' || myParticipation.status === 'advanced') && !isRoundLocked && hasActiveRound;
 
   // Build a map of userId -> pick for the survivors tab
   const pickByUser = Object.fromEntries(picks.map((p: any) => [p.user_id, p]));
@@ -775,11 +780,21 @@ export function PoolDetailClient({
           )}
 
           {/* Locked round with no pick */}
-          {!canSubmitPick && !hasSubmittedPick && myParticipation && myParticipation.status !== 'eliminated' && (
+          {!canSubmitPick && !hasSubmittedPick && myParticipation && myParticipation.status !== 'eliminated' && hasActiveRound && isRoundLocked && (
             <Card>
               <CardBody className="text-center py-8">
                 <Clock size={28} className="text-gray-600 mx-auto mb-2" />
                 <p className="text-gray-400 text-sm">The pick window is closed for this round.</p>
+              </CardBody>
+            </Card>
+          )}
+
+          {/* No round created yet */}
+          {!canSubmitPick && !hasSubmittedPick && myParticipation && myParticipation.status !== 'eliminated' && !hasActiveRound && (
+            <Card>
+              <CardBody className="text-center py-8">
+                <Clock size={28} className="text-yellow-500 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">Picks open soon — check back shortly.</p>
               </CardBody>
             </Card>
           )}

@@ -4,7 +4,7 @@ const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const BASE_URL = 'https://api.the-odds-api.com/v4';
 
 const SPORT_KEYS: Record<string, string[]> = {
-  NBA:  ['basketball_nba'],
+  NBA:  ['basketball_nba', 'basketball_nba_playoffs'],
   WNBA: ['basketball_wnba'],
   MLB:  ['baseball_mlb'],
   NHL:  ['icehockey_nhl', 'icehockey_nhl_playoffs'],

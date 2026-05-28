@@ -3,6 +3,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { PoolCard } from '@/components/pool/PoolCard';
 import { Search } from 'lucide-react';
 import type { Pool } from '@/types';
+import { headers } from 'next/headers';
+import { getUserState, isRestrictedState } from '@/lib/geo';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,12 +16,18 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 interface Props {
-  searchParams: Promise<{ sport?: string; format?: string; status?: string; q?: string }>;
+  searchParams: Promise<{ sport?: string; format?: string; status?: string; q?: string; type?: string }>;
 }
 
 export default async function PoolsPage({ searchParams }: Props) {
   const params = await searchParams;
   const supabase = await createClient();
+
+  const headersList = await headers();
+  const userState = getUserState(headersList as unknown as Headers);
+  const restricted = isRestrictedState(userState);
+  // Restricted users can only see free pools
+  const poolTypeFilter = restricted ? 'free' : (params.type === 'free' || params.type === 'cash' ? params.type : null);
 
   let query = supabase
     .from('pools')
@@ -32,6 +40,7 @@ export default async function PoolsPage({ searchParams }: Props) {
   if (params.format && params.format !== 'All') query = query.eq('contest_format', params.format);
   if (params.status) query = query.eq('status', params.status);
   if (params.q) query = query.ilike('name', `%${params.q}%`);
+  if (poolTypeFilter) query = query.eq('pool_type', poolTypeFilter);
   // Hide completed pools 24 hours after completion unless user is filtering for them
   if (!params.status || params.status !== 'completed') {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -118,6 +127,33 @@ export default async function PoolsPage({ searchParams }: Props) {
         <h1 className="text-3xl font-black text-white">Browse Contests</h1>
         <p className="text-gray-400 mt-1">Find the perfect survival contest to enter.</p>
       </div>
+
+      {/* Pool Type Tabs */}
+      {restricted ? (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-2 text-yellow-400 text-sm">
+          Cash pools are not available in your state. Showing free pools only.
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          {[
+            { label: 'All Pools', value: '' },
+            { label: '🆓 Free Pools', value: 'free' },
+            { label: '💰 Cash Pools', value: 'cash' },
+          ].map(tab => (
+            <a
+              key={tab.value}
+              href={`/pools?${new URLSearchParams({ ...params, type: tab.value })}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                (params.type ?? '') === tab.value
+                  ? 'bg-green-500 text-black'
+                  : 'bg-gray-800 text-gray-400 hover:text-white border border-gray-700'
+              }`}
+            >
+              {tab.label}
+            </a>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col gap-4">

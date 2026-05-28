@@ -668,6 +668,30 @@ export async function GET(request: NextRequest) {
           .in('status', ['active', 'advanced']);
       }
       await supabase.from('pools').update({ status: 'completed', tiebreaker_active: false, updated_at: new Date().toISOString() }).eq('id', round.pool_id);
+
+      // Award Gold Coins to winner(s) of free pools
+      if (pool.pool_type === 'free') {
+        const { data: freeWinners } = await supabase
+          .from('pool_participants')
+          .select('user_id')
+          .eq('pool_id', round.pool_id)
+          .eq('status', 'winner');
+        const goldReward = parseInt(process.env.FREE_POOL_WIN_GOLD_COINS ?? '500');
+        for (const w of freeWinners ?? []) {
+          const { data: prof } = await supabase.from('profiles').select('gold_coins').eq('id', w.user_id).single();
+          if (prof) {
+            await supabase.from('profiles').update({ gold_coins: prof.gold_coins + goldReward }).eq('id', w.user_id);
+            await supabase.from('coin_transactions').insert({
+              user_id: w.user_id,
+              gold_delta: goldReward,
+              sweeps_delta: 0,
+              transaction_type: 'pool_win',
+              pool_id: round.pool_id,
+              note: `Won free pool: ${pool.name}`,
+            });
+          }
+        }
+      }
     } else {
       // Mark pool as active so new entries are blocked for non-streak-race pools
       if (pool.status === 'open' && pool.contest_format !== 'streak_race') {

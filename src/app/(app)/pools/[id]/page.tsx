@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import { PoolDetailClient } from '@/components/pool/PoolDetailClient';
+import { headers } from 'next/headers';
+import { getUserState, isRestrictedState } from '@/lib/geo';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +15,9 @@ export default async function PoolDetailPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  const headersList = await headers();
+  const isRestrictedUser = isRestrictedState(getUserState(headersList as unknown as Headers));
 
   const [{ data: pool }, { data: participants }, { data: currentRoundData }, { data: latestRound }] = await Promise.all([
     supabase.from('pools').select('*').eq('id', id).single(),
@@ -229,6 +234,7 @@ export default async function PoolDetailPage({ params }: Props) {
       initialMyTeam={myTeam}
       initialAllTeams={allTeams}
       submittedPickUserIds={submittedPickUserIds}
+      isRestrictedUser={isRestrictedUser}
     />
   );
 }

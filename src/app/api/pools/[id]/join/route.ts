@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getUserState, isRestrictedState } from '@/lib/geo';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -9,6 +10,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { data: pool } = await supabase.from('pools').select('*').eq('id', id).single();
   if (!pool) return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
+
+  // Geo block: restricted-state users cannot join cash pools
+  if ((pool as any).pool_type === 'cash') {
+    const userState = getUserState(request.headers);
+    if (isRestrictedState(userState)) {
+      return NextResponse.json({ error: 'Cash pools are not available in your state.' }, { status: 403 });
+    }
+  }
+
   const joinableStatuses = (pool.contest_format === 'streak_race' || pool.contest_format === 'team_battle' || pool.round_frequency === 'game_day')
     ? ['open', 'upcoming', 'active']
     : ['open', 'upcoming'];

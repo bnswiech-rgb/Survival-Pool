@@ -26,6 +26,7 @@ interface Props {
   initialMyTeam?: any;
   initialAllTeams?: any[];
   submittedPickUserIds?: string[];
+  isRestrictedUser?: boolean;
 }
 
 const TABS = ['Overview', 'Picks', 'Survivors', 'History', 'Chat'];
@@ -45,6 +46,7 @@ export function PoolDetailClient({
   initialMyTeam = null,
   initialAllTeams = [],
   submittedPickUserIds = [],
+  isRestrictedUser = false,
 }: Props) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [participants, setParticipants] = useState(initialParticipants);
@@ -350,13 +352,19 @@ export function PoolDetailClient({
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h1 className="text-3xl font-black text-white">{pool.name}</h1>
             <Badge variant="purple">{getContestFormatLabel(pool.contest_format)}</Badge>
+            {(pool as any).pool_type === 'free'
+              ? <Badge variant="green">Free · Gold Coins</Badge>
+              : <Badge variant="yellow">Cash · Sweeps Coins</Badge>
+            }
           </div>
           <div className="text-gray-400">{pool.sport}</div>
         </div>
         {!myParticipation && (pool.status === 'open' || pool.status === 'upcoming' || (['streak_race', 'team_battle'].includes(pool.contest_format) && pool.status === 'active') || (pool.round_frequency === 'game_day' && pool.status === 'active')) && currentUser && (
-          <Button onClick={handleJoin} loading={joiningLoading} size="lg">
-            Join Contest {pool.entry_fee_cents > 0 ? `• ${formatCents(pool.entry_fee_cents)}` : '• Free'}
-          </Button>
+          (isRestrictedUser && (pool as any).pool_type === 'cash')
+            ? <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-400">Cash pools are not available in your state.</div>
+            : <Button onClick={handleJoin} loading={joiningLoading} size="lg">
+                Join Contest {pool.entry_fee_cents > 0 ? `• ${formatCents(pool.entry_fee_cents)}` : '• Free'}
+              </Button>
         )}
         {!myParticipation && !['streak_race', 'team_battle'].includes(pool.contest_format) && pool.round_frequency !== 'game_day' && (pool.status === 'active' || pool.status === 'completed') && (
           <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-400">

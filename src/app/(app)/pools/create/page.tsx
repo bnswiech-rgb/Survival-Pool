@@ -32,6 +32,7 @@ export default function CreatePoolPage() {
   const [sport, setSport] = useState('All Sports');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [maxEntries, setMaxEntries] = useState('');
+  const [poolType, setPoolType] = useState<'cash' | 'free'>('free');
 
   // Step 2: Format
   const [isTeamPool, setIsTeamPool] = useState(false);
@@ -65,6 +66,7 @@ export default function CreatePoolPage() {
         name,
         sport,
         visibility,
+        pool_type: poolType,
         max_entries: maxEntries ? parseInt(maxEntries) : null,
         contest_format: isTeamPool ? 'team_battle' : contestFormat,
         team_scoring: isTeamPool ? contestFormat : null,
@@ -153,6 +155,23 @@ export default function CreatePoolPage() {
                 ))}
               </div>
               <p className="text-xs text-gray-500">{visibility === 'private' ? 'Only accessible via invite code' : 'Visible in public browse'}</p>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-300">Prize Type</label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'free', label: '🆓 Free Pool', desc: 'Gold Coins only — open to all US states' },
+                  { value: 'cash', label: '💰 Cash Pool', desc: 'Sweeps Coins redeemable for cash prizes' },
+                ] as const).map(opt => (
+                  <button key={opt.value} type="button" onClick={() => setPoolType(opt.value)}
+                    className={`flex-1 text-left px-4 py-3 rounded-xl border transition-colors ${
+                      poolType === opt.value ? 'bg-green-500/20 border-green-500/50' : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                    }`}>
+                    <div className="font-bold text-white text-sm">{opt.label}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
             <Input label="Max Entries (optional)" type="number" value={maxEntries} onChange={e => setMaxEntries(e.target.value)} placeholder="Unlimited" min="2" />
           </CardBody>
@@ -353,6 +372,7 @@ export default function CreatePoolPage() {
                 { label: 'Push Rule', value: pushRule },
                 { label: 'All-Lose Rule', value: allLoseRule },
                 { label: 'Pool Type', value: isTeamPool ? `Team (${teamSize} per team)` : 'Solo' },
+                { label: 'Prize Type', value: poolType === 'free' ? 'Free (Gold Coins)' : 'Cash (Sweeps Coins)' },
                 { label: 'Max Entries', value: maxEntries || 'Unlimited' },
               ].map(item => (
                 <div key={item.label} className="bg-gray-800 rounded-lg px-3 py-2">

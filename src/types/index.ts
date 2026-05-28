@@ -6,6 +6,7 @@ export type ParticipantStatus = 'active' | 'advanced' | 'eliminated' | 'winner';
 export type PaymentStatus = 'pending' | 'paid' | 'refunded' | 'waived';
 export type RoundStatus = 'open' | 'locked' | 'grading' | 'completed';
 export type ContestFormat = 'classic' | 'lives' | 'first_to_x' | 'best_record' | 'streak_race' | 'team_battle';
+export type PoolType = 'cash' | 'free';
 export type PushRule = 'advance' | 'eliminate' | 'repeat';
 export type AllLoseRule = 'repeat' | 'split' | 'tiebreak';
 export type MessageType = 'user' | 'system' | 'pinned';
@@ -73,6 +74,7 @@ export interface Pool {
   start_date: string;
   pick_deadline: string;
   round_frequency: 'daily' | 'weekly' | 'game_day';
+  pool_type: PoolType;
   status: PoolStatus;
   visibility: 'public' | 'private';
   invite_code: string;

@@ -14,7 +14,7 @@ export default function SweepstakesRulesPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">1. Sponsor</h2>
-          <p>Brehtan Swiech, operating as Sharpr ("Sponsor"). Contact: <span className="text-green-400">legal@survivorpicks.com</span>.</p>
+          <p>Brehtan Swiech, operating as Sharpr ("Sponsor"). Contact: <span className="text-green-400">legal@sharprpicks.com</span>.</p>
         </section>
 
         <section className="space-y-3">
@@ -42,7 +42,8 @@ export default function SweepstakesRulesPage() {
               <div className="mt-2 pl-4 border-l-2 border-gray-700 text-gray-400">
                 Sharpr AMOE Request<br />
                 c/o Brehtan Swiech<br />
-                [Your Mailing Address — add before launch]<br />
+                401 Guadalupe St, Apt 2219<br />
+                Austin, TX 78701<br />
               </div>
               <p className="mt-2">Limit one AMOE request per outer envelope; one AMOE request per household per day; requests received after the Program ends will not be honored. Allow up to 14 business days for processing. Sponsor is not responsible for lost, late, illegible, or misdirected mail.</p>
             </li>
@@ -126,8 +127,7 @@ export default function SweepstakesRulesPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">16. Contact</h2>
-          <p>For questions about this Program, contact Sponsor at <span className="text-green-400">legal@survivorpicks.com</span>.</p>
-          <p className="text-gray-500 text-xs mt-2">Note: Replace placeholder email and mailing address with actual values before launch.</p>
+          <p>For questions about this Program, contact Sponsor at <span className="text-green-400">legal@sharprpicks.com</span>.</p>
         </section>
 
       </div>

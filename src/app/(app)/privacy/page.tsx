@@ -76,7 +76,7 @@ export default function PrivacyPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">8. Your Rights and Choices</h2>
           <p><strong className="text-white">Access and correction:</strong> You may review and update your account information at any time through your profile settings.</p>
-          <p><strong className="text-white">Deletion:</strong> You may request deletion of your account and associated personal data by emailing <span className="text-green-400">legal@survivorpicks.com</span>. We will process deletion requests within 30 days, subject to any legal retention requirements.</p>
+          <p><strong className="text-white">Deletion:</strong> You may request deletion of your account and associated personal data by emailing <span className="text-green-400">legal@sharprpicks.com</span>. We will process deletion requests within 30 days, subject to any legal retention requirements.</p>
           <p><strong className="text-white">Email opt-out:</strong> You may opt out of non-transactional promotional emails at any time by following the unsubscribe link in any such email. You cannot opt out of transactional emails necessary for account operation (e.g., password reset, prize notifications).</p>
           <p><strong className="text-white">California residents:</strong> If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA), including the right to know what personal information we collect, the right to delete your personal information, and the right to opt out of the sale of personal information (we do not sell personal information). To exercise these rights, contact us at the email below.</p>
         </section>
@@ -94,7 +94,7 @@ export default function PrivacyPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">11. Contact</h2>
           <p>For privacy questions, data access requests, or deletion requests, contact us at:</p>
-          <p className="text-green-400">legal@survivorpicks.com</p>
+          <p className="text-green-400">legal@sharprpicks.com</p>
           <p className="text-gray-500">Brehtan Swiech / Sharpr</p>
           <p className="text-gray-500 text-xs mt-2">Note: Replace with your actual contact email and mailing address before launch.</p>
         </section>

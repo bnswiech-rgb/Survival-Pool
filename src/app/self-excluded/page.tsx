@@ -77,7 +77,7 @@ export default async function SelfExcludedPage({ searchParams }: Props) {
 
           <p className="text-xs text-gray-600">
             To request removal of a permanent self-exclusion or for account questions, contact{' '}
-            <span className="text-gray-400">legal@survivorpicks.com</span>. Note: permanent self-exclusions
+            <span className="text-gray-400">legal@sharprpicks.com</span>. Note: permanent self-exclusions
             are irrevocable for a minimum of 5 years.
           </p>
         </div>

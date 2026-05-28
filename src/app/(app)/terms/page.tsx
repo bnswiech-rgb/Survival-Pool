@@ -96,7 +96,7 @@ export default function TermsPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-white">16. Contact</h2>
-          <p>For questions about these Terms, contact us at: <span className="text-green-400">legal@survivorpicks.com</span></p>
+          <p>For questions about these Terms, contact us at: <span className="text-green-400">legal@sharprpicks.com</span></p>
           <p className="text-gray-500 text-xs">Note: Replace with your actual contact email before launch.</p>
         </section>
       </div>

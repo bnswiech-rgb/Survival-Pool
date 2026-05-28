@@ -92,7 +92,7 @@ export default function ResponsibleGamingPage() {
                 <h3 className="font-bold text-white mb-1">Account Closure</h3>
                 <p className="text-sm text-gray-400">
                   You may request permanent account closure and deletion of your data at any time by contacting{' '}
-                  <span className="text-green-400">legal@survivorpicks.com</span>. We will process your request within 30 days.
+                  <span className="text-green-400">legal@sharprpicks.com</span>. We will process your request within 30 days.
                 </p>
               </div>
             </CardBody>
@@ -177,7 +177,7 @@ export default function ResponsibleGamingPage() {
           <p>Sharpr enforces an 18+ age requirement on all accounts. We do not market to minors and do not allow underage participation.</p>
           <p>Our sweepstakes model is designed so that no purchase is ever required to play. Free Alternate Method of Entry (AMOE) ensures everyone has equal access to Sweeps Coins regardless of spending.</p>
           <p>We honor all self-exclusion requests immediately with no waiting period. Permanent self-exclusions are irrevocable for a minimum of 5 years.</p>
-          <p>If you believe someone is using Sharpr in a manner harmful to themselves, please contact us at <span className="text-green-400">legal@survivorpicks.com</span>.</p>
+          <p>If you believe someone is using Sharpr in a manner harmful to themselves, please contact us at <span className="text-green-400">legal@sharprpicks.com</span>.</p>
         </div>
       </section>
     </div>

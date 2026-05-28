@@ -6,8 +6,11 @@ const BASE_URL = 'https://api.the-odds-api.com/v4';
 const SPORT_KEYS: Record<string, string[]> = {
   NBA:  ['basketball_nba', 'basketball_nba_playoffs'],
   WNBA: ['basketball_wnba'],
-  MLB:  ['baseball_mlb'],
+  MLB:  ['baseball_mlb', 'baseball_mlb_preseason'],
   NHL:  ['icehockey_nhl', 'icehockey_nhl_playoffs'],
+  NFL:  ['americanfootball_nfl', 'americanfootball_nfl_preseason', 'americanfootball_nfl_playoffs'],
+  CFB:  ['americanfootball_ncaaf', 'americanfootball_ncaaf_championship_winner'],
+  NBA2: ['basketball_nba_championship_winner'],
   ATP:  [
     'tennis_atp_french_open',
     'tennis_atp_wimbledon',
@@ -21,6 +24,17 @@ const SPORT_KEYS: Record<string, string[]> = {
     'tennis_wta_us_open',
     'tennis_wta_australian_open',
     'tennis_wta',
+  ],
+  UFC:  ['mma_mixed_martial_arts'],
+  Soccer: [
+    'soccer_usa_mls',
+    'soccer_epl',
+    'soccer_uefa_champs_league',
+    'soccer_uefa_europa_league',
+    'soccer_spain_la_liga',
+    'soccer_germany_bundesliga',
+    'soccer_italy_serie_a',
+    'soccer_france_ligue_one',
   ],
 };
 

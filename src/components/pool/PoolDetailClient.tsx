@@ -297,8 +297,33 @@ export function PoolDetailClient({
   }, [activeTab]);
 
   const isAdmin = currentUser?.role === 'admin';
+  const isCreator = currentUser?.id === pool.created_by;
   const hasSubmittedPick = !!myPick;
   const picksVisible = hasSubmittedPick || isAdmin;
+
+  const [editingSettings, setEditingSettings] = useState(false);
+  const [editVisibility, setEditVisibility] = useState(pool.visibility);
+  const [editName, setEditName] = useState(pool.name);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  async function saveSettings() {
+    setSavingSettings(true);
+    try {
+      const res = await fetch(`/api/pools/${pool.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName, visibility: editVisibility }),
+      });
+      if (!res.ok) { toast.error('Failed to save settings'); return; }
+      toast.success('Settings updated');
+      setEditingSettings(false);
+      window.location.reload();
+    } catch {
+      toast.error('Something went wrong');
+    } finally {
+      setSavingSettings(false);
+    }
+  }
   const isRoundLocked = !initialCurrentRound || initialCurrentRound.status !== 'open' || new Date(initialCurrentRound.deadline) < new Date();
   const canSubmitPick = myParticipation && (myParticipation.status === 'active' || myParticipation.status === 'advanced') && !isRoundLocked;
 
@@ -660,6 +685,61 @@ export function PoolDetailClient({
                 <p>• Heavily favored picks are not eligible</p>
               </CardBody>
             </Card>
+
+            {/* Creator settings — only visible to pool creator */}
+            {isCreator && (
+              <Card>
+                <CardHeader className="flex items-center justify-between">
+                  <h3 className="font-bold text-white text-sm">Pool Settings</h3>
+                  {!editingSettings && (
+                    <button onClick={() => setEditingSettings(true)} className="text-xs text-blue-400 hover:text-blue-300">
+                      Edit
+                    </button>
+                  )}
+                </CardHeader>
+                <CardBody>
+                  {!editingSettings ? (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between"><span className="text-gray-400">Name</span><span className="text-white">{pool.name}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">Visibility</span><span className="text-white capitalize">{pool.visibility}</span></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-gray-400 block mb-1">Pool Name</label>
+                        <input
+                          value={editName}
+                          onChange={e => setEditName(e.target.value)}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-400 block mb-1">Visibility</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(['public', 'private'] as const).map(v => (
+                            <button
+                              key={v}
+                              onClick={() => setEditVisibility(v)}
+                              className={`py-2 rounded-lg text-sm font-medium border transition-colors ${editVisibility === v ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600'}`}
+                            >
+                              {v.charAt(0).toUpperCase() + v.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button onClick={() => setEditingSettings(false)} className="flex-1 py-2 rounded-lg text-sm text-gray-400 border border-gray-700 hover:border-gray-600">
+                          Cancel
+                        </button>
+                        <button onClick={saveSettings} disabled={savingSettings} className="flex-1 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50">
+                          {savingSettings ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            )}
           </div>
         </div>
       )}

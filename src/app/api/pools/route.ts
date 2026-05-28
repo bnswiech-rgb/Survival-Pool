@@ -33,17 +33,16 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     name, sport, visibility, max_entries, contest_format, lives_count, target_wins, target_streak,
-    max_losses, push_resets_streak, entry_fee_cents, entry_fee_coins, rake_percentage, start_date, pick_deadline,
+    max_losses, push_resets_streak, entry_fee_cents, entry_fee_coins, rake_percentage, start_date: raw_start_date, pick_deadline,
     round_frequency, push_rule, all_lose_rule, prize_structure, team_size,
   } = body;
 
-  if (!name || !sport || !start_date) {
+  if (!name || !sport || !raw_start_date) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
   // $5,000 max prize pool per contest (NY/FL sweepstakes compliance)
-  // 1 GC = $0.01 = 1 SC, so cap is 500,000 in either unit
-  const MAX_PRIZE_POOL = 500_000; // cents or coins
+  const MAX_PRIZE_POOL = 500_000;
   const feeCoins = entry_fee_coins ?? 0;
   const feeCents = entry_fee_cents ?? 0;
   const rake = rake_percentage ?? 10;
@@ -58,10 +57,10 @@ export async function POST(request: NextRequest) {
   }
 
   // For game_day pools, always use today as start_date so games are immediately available
-  if ((round_frequency ?? 'weekly') === 'game_day') {
-    const today = new Date();
-    start_date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())).toISOString();
-  }
+  const isGameDay = (round_frequency ?? 'weekly') === 'game_day';
+  const start_date = isGameDay
+    ? (() => { const t = new Date(); return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate())).toISOString(); })()
+    : raw_start_date;
 
   // Default pick_deadline to 9:30 PM ET on the start date if not provided
   const resolvedPickDeadline = pick_deadline ?? (() => {
@@ -104,7 +103,6 @@ export async function POST(request: NextRequest) {
   // Create first round deadline
   const dateOnly = start_date.substring(0, 10);
   const startParts = dateOnly.split('-').map(Number);
-  const isGameDay = (round_frequency ?? 'weekly') === 'game_day';
 
   let firstRoundDeadline: Date;
   if (isGameDay) {

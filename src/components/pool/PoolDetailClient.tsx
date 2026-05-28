@@ -365,6 +365,25 @@ export function PoolDetailClient({
         )}
       </div>
 
+      {/* Invite Link Banner — shown to creator of private pools */}
+      {currentUser?.id === pool.created_by && pool.visibility === 'private' && (pool as any).invite_code && (
+        <div className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-gray-400 mb-1">Invite Link — share this to let people join</div>
+            <code className="text-xs text-green-400 truncate block">{typeof window !== 'undefined' ? window.location.origin : ''}/invite/{(pool as any).invite_code}</code>
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/invite/${(pool as any).invite_code}`);
+              toast.success('Invite link copied!');
+            }}
+            className="shrink-0 text-xs text-gray-400 hover:text-white px-3 py-2 border border-gray-700 rounded-lg"
+          >
+            Copy
+          </button>
+        </div>
+      )}
+
       {/* My Status Banner */}
       {myParticipation && (
         <div className={`rounded-xl px-4 py-3 border flex items-center gap-3 ${

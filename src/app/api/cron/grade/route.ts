@@ -703,8 +703,7 @@ export async function GET(request: NextRequest) {
 
         // Get emails + usernames
         const { data: authUsers } = await supabase.auth.admin.listUsers();
-        const { data: profiles } = await supabase.from('profiles').select('id, username').eq('pool_id' as any, round.pool_id);
-        // fallback: get all profiles for these user IDs
+        // get all profiles for these user IDs
         const userIds = (allParticipants ?? []).map((p: any) => p.user_id);
         const { data: profileList } = await supabase.from('profiles').select('id, username').in('id', userIds);
         const profileMap = Object.fromEntries((profileList ?? []).map((p: any) => [p.id, p.username]));

@@ -116,6 +116,31 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Fetch ESPN scoreboard for NBA totals fallback (over/under when odds API doesn't have them)
+  // Maps last word of team name (e.g. "Thunder") -> overUnder line
+  const espnTotalsMap = new Map<string, number>();
+  try {
+    const espnRes = await fetch(
+      'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
+      { cache: 'no-store' }
+    );
+    if (espnRes.ok) {
+      const espnData = await espnRes.json();
+      for (const event of espnData?.events ?? []) {
+        const competition = event.competitions?.[0];
+        if (!competition) continue;
+        const odds = competition.odds?.[0];
+        if (!odds?.overUnder) continue;
+        const overUnder = parseFloat(odds.overUnder);
+        if (isNaN(overUnder)) continue;
+        for (const comp of competition.competitors ?? []) {
+          const lastName = (comp.team?.displayName ?? comp.team?.name ?? '').split(' ').pop()?.toLowerCase();
+          if (lastName) espnTotalsMap.set(lastName, overUnder);
+        }
+      }
+    }
+  } catch { /* ESPN fallback is best-effort */ }
+
   const eligibleGames = allGames
     .filter(game => {
       const t = new Date(game.commence_time);
@@ -158,6 +183,16 @@ export async function GET(request: NextRequest) {
             odds,
             label: `${outcome.name} ${outcome.point}`,
           });
+        }
+      } else {
+        // Fallback: use ESPN over/under if odds API didn't return totals
+        const homeLast = game.home_team.split(' ').pop()?.toLowerCase();
+        const overUnder = homeLast ? espnTotalsMap.get(homeLast) : null;
+        if (overUnder) {
+          picks.push(
+            { type: 'total', team: 'Over', line: `Over ${overUnder}`, odds: -110, label: `Over ${overUnder}` },
+            { type: 'total', team: 'Under', line: `Under ${overUnder}`, odds: -110, label: `Under ${overUnder}` },
+          );
         }
       }
 

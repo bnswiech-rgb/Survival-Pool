@@ -14,7 +14,7 @@ export default async function PoolDetailPage({ params }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: pool }, { data: participants }, { data: currentRound }, { data: latestRound }] = await Promise.all([
+  const [{ data: pool }, { data: participants }, { data: currentRoundData }, { data: latestRound }] = await Promise.all([
     supabase.from('pools').select('*').eq('id', id).single(),
     supabase
       .from('pool_participants')
@@ -81,6 +81,8 @@ export default async function PoolDetailPage({ params }: Props) {
     currentRoundGradedPicks = gradedPicks ?? [];
   }
 
+  let currentRound = currentRoundData ?? null;
+
   if (!pool || pool.status === 'canceled') notFound();
 
   // Auto-heal: ensure every active pool always has a pickable open round
@@ -128,7 +130,7 @@ export default async function PoolDetailPage({ params }: Props) {
         // Round exists but isn't open or has past deadline — reopen it with correct deadline
         const deadline = await getNextGameDeadline(pool.sport);
         await supabase.from('rounds').update({ status: 'open', deadline }).eq('id', existingRound.id);
-        (currentRound as any) = { ...existingRound, status: 'open', deadline };
+        currentRound = { ...existingRound, status: 'open', deadline };
       } else {
         // No rounds at all — create round 1
         const deadline = await getNextGameDeadline(pool.sport);
@@ -137,7 +139,7 @@ export default async function PoolDetailPage({ params }: Props) {
           .insert({ pool_id: id, round_number: 1, deadline, status: 'open' })
           .select()
           .single();
-        if (newRound) (currentRound as any) = newRound;
+        if (newRound) currentRound = newRound;
       }
     }
   }

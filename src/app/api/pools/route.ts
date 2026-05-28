@@ -57,6 +57,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // For game_day pools, always use today as start_date so games are immediately available
+  if ((round_frequency ?? 'weekly') === 'game_day') {
+    const today = new Date();
+    start_date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())).toISOString();
+  }
+
   // Default pick_deadline to 9:30 PM ET on the start date if not provided
   const resolvedPickDeadline = pick_deadline ?? (() => {
     const d = new Date(start_date);
@@ -95,11 +101,15 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Create first round — deadline is 9:30 PM ET on the pool's start_date
-  // (start_date is a date string like "2026-05-24"; map to 1:30 AM UTC the following day)
+  // Create first round — deadline depends on frequency:
+  // game_day: 11:59 PM ET (03:59 UTC next day) to cover late NBA games
+  // others: 9:30 PM ET (01:30 UTC next day)
   const dateOnly = start_date.substring(0, 10); // always get YYYY-MM-DD regardless of timestamp format
   const startParts = dateOnly.split('-').map(Number); // [yyyy, mm, dd]
-  const firstRoundDeadline = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2] + 1, 1, 30, 0, 0)); // 9:30 PM ET = 01:30 UTC next day
+  const isGameDay = (round_frequency ?? 'weekly') === 'game_day';
+  const firstRoundDeadline = isGameDay
+    ? new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2] + 1, 3, 59, 0, 0)) // 11:59 PM ET
+    : new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2] + 1, 1, 30, 0, 0)); // 9:30 PM ET
 
   await supabase.from('rounds').insert({
     pool_id: pool.id,

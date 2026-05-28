@@ -103,7 +103,7 @@ async function getNextNBAGameDayDeadline(): Promise<Date | null> {
   const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   let earliestDateStr: string | null = null;
 
-  for (const sportKey of ['basketball_nba', 'basketball_nba_playoffs']) {
+  for (const sportKey of ['basketball_nba']) {
     try {
       const res = await fetch(
         `https://api.the-odds-api.com/v4/sports/${sportKey}/odds?apiKey=${process.env.ODDS_API_KEY}&regions=us&markets=h2h&oddsFormat=american&dateFormat=iso`,

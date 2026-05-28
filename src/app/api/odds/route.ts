@@ -4,7 +4,7 @@ const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const BASE_URL = 'https://api.the-odds-api.com/v4';
 
 const SPORT_KEYS: Record<string, string[]> = {
-  NBA:  ['basketball_nba', 'basketball_nba_playoffs'],
+  NBA:  ['basketball_nba'],
   WNBA: ['basketball_wnba'],
   MLB:  ['baseball_mlb', 'baseball_mlb_preseason'],
   NHL:  ['icehockey_nhl', 'icehockey_nhl_playoffs'],
@@ -151,15 +151,13 @@ export async function GET(request: NextRequest) {
       if (totalsMarket) {
         for (const outcome of totalsMarket.outcomes) {
           const odds = Math.round(outcome.price);
-          if (odds >= -145 && odds <= -100) {
-            picks.push({
-              type: 'total',
-              team: outcome.name,
-              line: `${outcome.name} ${outcome.point}`,
-              odds,
-              label: `${outcome.name} ${outcome.point}`,
-            });
-          }
+          picks.push({
+            type: 'total',
+            team: outcome.name,
+            line: `${outcome.name} ${outcome.point}`,
+            odds,
+            label: `${outcome.name} ${outcome.point}`,
+          });
         }
       }
 

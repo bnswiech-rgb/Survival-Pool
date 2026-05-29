@@ -76,7 +76,7 @@ export default function CoinsPage() {
         <p className="text-gray-400">Purchase Gold Coins to enter contests and receive bonus Sweeps Coins.</p>
         <div className="flex items-center justify-center gap-6 pt-1 text-sm">
           <span><span className="text-yellow-400 font-bold">🪙 Gold Coins</span> — contest entry only, no cash value</span>
-          <span><span className="text-green-400 font-bold">💎 Sweeps Coins</span> — redeemable for real cash prizes</span>
+          <span><span className="text-green-400 font-bold">💎 Sweeps Coins</span> — redeemable for cash prizes</span>
         </div>
       </div>
 

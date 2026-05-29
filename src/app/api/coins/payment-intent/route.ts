@@ -4,18 +4,19 @@ import Stripe from 'stripe';
 import type { CoinPack } from '@/types';
 
 // sweeps_coins stored in cents of Sharpr Cash (÷100 = dollar value, 1 Sharpr Cash = $1.00)
+// Sharpr Coins: 10 coins per $1 spent (1 coin = $0.10)
 const COIN_PACKS: Record<string, CoinPack> = {
-  starter: { id: 'starter', label: 'Starter',  price_cents: 500,  gold_coins: 500,  sweeps_coins: 400  },
-  player:  { id: 'player',  label: 'Player',   price_cents: 1000, gold_coins: 1100, sweeps_coins: 800  },
-  pro:     { id: 'pro',     label: 'Pro',       price_cents: 2000, gold_coins: 2400, sweeps_coins: 1600 },
-  elite:   { id: 'elite',   label: 'Elite',     price_cents: 5000, gold_coins: 6500, sweeps_coins: 4500 },
+  starter: { id: 'starter', label: 'Starter',  price_cents: 500,  gold_coins: 50,  sweeps_coins: 400  },
+  player:  { id: 'player',  label: 'Player',   price_cents: 1000, gold_coins: 110, sweeps_coins: 800  },
+  pro:     { id: 'pro',     label: 'Pro',       price_cents: 2000, gold_coins: 240, sweeps_coins: 1600 },
+  elite:   { id: 'elite',   label: 'Elite',     price_cents: 5000, gold_coins: 650, sweeps_coins: 4500 },
 };
 
-// Custom: coins derived from cash amount (80% ratio). price = coins / 100, cash stored = coins * 0.8
+// Custom: 10 coins per $1 spent, 80% SC back
 function buildCustomPack(goldCoins: number): CoinPack {
-  const price_cents = Math.round(goldCoins); // goldCoins here is already price_cents (passed from client)
+  const price_cents = Math.round(goldCoins); // passed from client as price_cents
   const sweeps_coins = Math.round(price_cents * 0.8);
-  const gold_coins = price_cents; // 1 coin per cent = 100 coins per $1
+  const gold_coins = Math.round(price_cents / 10); // 10 coins per $1
   return { id: 'custom', label: 'Custom', price_cents, gold_coins, sweeps_coins };
 }
 

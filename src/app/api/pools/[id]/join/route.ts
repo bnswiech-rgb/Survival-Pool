@@ -81,17 +81,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
   }
 
-  // Cash entry fee (mock payment)
+  // Cash entry fee: deduct SC and track playthrough
   if (pool.entry_fee_cents > 0) {
-    const platformFee = Math.round(pool.entry_fee_cents * (pool.rake_percentage / 100));
-    await supabase.from('payments').insert({
-      pool_id: id,
+    const { data: scProfile } = await supabase
+      .from('profiles')
+      .select('sweeps_coins, lifetime_sc_wagered')
+      .eq('id', user.id)
+      .single();
+    if (!scProfile || (scProfile.sweeps_coins ?? 0) < pool.entry_fee_cents) {
+      return NextResponse.json({ error: 'Not enough Sharpr Cash to enter this contest' }, { status: 400 });
+    }
+    await supabase.from('profiles').update({
+      sweeps_coins: scProfile.sweeps_coins - pool.entry_fee_cents,
+      lifetime_sc_wagered: (scProfile.lifetime_sc_wagered ?? 0) + pool.entry_fee_cents,
+    }).eq('id', user.id);
+    await supabase.from('coin_transactions').insert({
       user_id: user.id,
-      amount_cents: pool.entry_fee_cents,
-      platform_fee_cents: platformFee,
-      status: 'completed',
-      provider: 'mock',
-      provider_payment_id: `mock_${Date.now()}`,
+      gold_delta: 0,
+      sweeps_delta: -pool.entry_fee_cents,
+      transaction_type: 'pool_entry',
+      pool_id: id,
+      note: `Entered: ${pool.name}`,
     });
   }
 

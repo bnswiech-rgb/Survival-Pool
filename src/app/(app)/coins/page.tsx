@@ -10,14 +10,15 @@ import type { CoinPack } from '@/types';
 const PaymentModal = dynamic(() => import('@/components/coins/PaymentModal'), { ssr: false });
 
 const COIN_PACKS: CoinPack[] = [
-  { id: 'starter', label: 'Starter', price_cents: 500,  gold_coins: 500,  sweeps_coins: 400  },
-  { id: 'player',  label: 'Player',  price_cents: 1000, gold_coins: 1100, sweeps_coins: 800,  popular: true },
-  { id: 'pro',     label: 'Pro',     price_cents: 2000, gold_coins: 2400, sweeps_coins: 1600 },
-  { id: 'elite',   label: 'Elite',   price_cents: 5000, gold_coins: 6500, sweeps_coins: 4500 },
+  { id: 'starter', label: 'Starter', price_cents: 500,  gold_coins: 50,  sweeps_coins: 400  },
+  { id: 'player',  label: 'Player',  price_cents: 1000, gold_coins: 110, sweeps_coins: 800,  popular: true },
+  { id: 'pro',     label: 'Pro',     price_cents: 2000, gold_coins: 240, sweeps_coins: 1600 },
+  { id: 'elite',   label: 'Elite',   price_cents: 5000, gold_coins: 650, sweeps_coins: 4500 },
 ];
 
 // User enters spend amount → derive coins and SC received (80% back as cash)
-function spendToCoins(spend: number) { return Math.round(spend * 100); }
+// 10 coins per $1 spent (1 coin = $0.10)
+function spendToCoins(spend: number) { return Math.round(spend * 10); }
 function spendToCashDisplay(spend: number) { return (spend * 0.8).toFixed(2); }
 
 

@@ -8,12 +8,14 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('gold_coins, sweeps_coins')
+    .select('gold_coins, sweeps_coins, lifetime_sc_purchased, lifetime_sc_wagered')
     .eq('id', user.id)
     .single();
 
   return NextResponse.json({
     gold_coins: profile?.gold_coins ?? 0,
     sweeps_coins: profile?.sweeps_coins ?? 0,
+    lifetime_sc_purchased: profile?.lifetime_sc_purchased ?? 0,
+    lifetime_sc_wagered: profile?.lifetime_sc_wagered ?? 0,
   });
 }

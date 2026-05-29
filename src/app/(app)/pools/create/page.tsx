@@ -46,6 +46,7 @@ export default function CreatePoolPage() {
 
   // Step 3: Entry & Prize
   const [entryFeeCoins, setEntryFeeCoins] = useState('0');
+  const [entryFeeCash, setEntryFeeCash] = useState('1.00'); // Sharpr Cash dollars for cash pools
   const rakePercentage = '10';
 
   // Step 4: Schedule
@@ -76,7 +77,7 @@ export default function CreatePoolPage() {
         target_streak: parseInt(targetStreak),
         max_losses: maxLosses ? parseInt(maxLosses) : null,
         push_resets_streak: pushResetsStreak,
-        entry_fee_cents: 0,
+        entry_fee_cents: poolType === 'cash' ? Math.round(parseFloat(entryFeeCash) * 100) || 100 : 0,
         entry_fee_coins: parseInt(entryFeeCoins) || 0,
         rake_percentage: parseFloat(rakePercentage),
         start_date: new Date(`${startDate}T00:00:00`).toISOString(),
@@ -161,7 +162,7 @@ export default function CreatePoolPage() {
               <div className="flex gap-2">
                 {([
                   { value: 'free', label: '🆓 Free Pool', desc: 'Gold Coins only — open to all US states' },
-                  { value: 'cash', label: '💰 Cash Pool', desc: 'Sweeps Coins redeemable for cash prizes' },
+                  { value: 'cash', label: '💰 Cash Pool', desc: 'Sharpr Cash prizes redeemable for real money' },
                 ] as const).map(opt => (
                   <button key={opt.value} type="button" onClick={() => setPoolType(opt.value)}
                     className={`flex-1 text-left px-4 py-3 rounded-xl border transition-colors ${
@@ -269,29 +270,38 @@ export default function CreatePoolPage() {
             {poolType === 'free' ? (
               <>
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-3 py-2 text-blue-400 text-sm">
-                  Free pools award Gold Coins to the winner. No cash prizes.
+                  Free contests award Sharpr Coins to the winner. No cash prizes.
                 </div>
                 <Input
-                  label="Entry Fee (Gold Coins)"
+                  label="Entry Fee (Sharpr Coins)"
                   type="number"
                   value={entryFeeCoins}
                   onChange={e => setEntryFeeCoins(e.target.value)}
                   min="0"
-                  hint="Set to 0 for a completely free contest. Gold Coins have no cash value."
+                  hint="Set to 0 for a completely free contest. Sharpr Coins have no cash value."
                 />
               </>
             ) : (
               <div className="space-y-3">
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 text-yellow-400 text-sm">
-                  Cash pools use Sweeps Coins redeemable for real prizes. Entry fees are set in Gold Coins. Prize pool is capped at $4,999.
+                  Cash contests use Sharpr Cash ($1 SC = $1.00) redeemable for real prizes. Prize pool is capped at $4,999.
                 </div>
                 <Input
-                  label="Entry Fee (Gold Coins)"
+                  label="Entry Fee (Sharpr Cash $)"
+                  type="number"
+                  value={entryFeeCash}
+                  onChange={e => setEntryFeeCash(e.target.value)}
+                  min="1"
+                  step="0.01"
+                  hint="Minimum $1.00 Sharpr Cash per entry. 1 Sharpr Cash = $1.00 redeemable."
+                />
+                <Input
+                  label="Entry Fee (Sharpr Coins, optional)"
                   type="number"
                   value={entryFeeCoins}
                   onChange={e => setEntryFeeCoins(e.target.value)}
                   min="0"
-                  hint="Gold Coins required to enter. 100 GC = $1.00 USD."
+                  hint="Optional Sharpr Coins required to enter (no cash value)."
                 />
               </div>
             )}
@@ -394,13 +404,13 @@ export default function CreatePoolPage() {
                 { label: 'Sport', value: sport },
                 { label: 'Format', value: getContestFormatLabel(contestFormat) },
                 { label: 'Visibility', value: visibility },
-                { label: 'Entry Fee', value: parseInt(entryFeeCoins) > 0 ? `${parseInt(entryFeeCoins).toLocaleString()} GC` : 'Free' },
+                { label: 'Entry Fee', value: poolType === 'cash' ? `$${parseFloat(entryFeeCash).toFixed(2)} SC${parseInt(entryFeeCoins) > 0 ? ` + ${parseInt(entryFeeCoins).toLocaleString()} Coins` : ''}` : (parseInt(entryFeeCoins) > 0 ? `${parseInt(entryFeeCoins).toLocaleString()} Sharpr Coins` : 'Free') },
                 { label: 'Start Date', value: startDate ? new Date(`${startDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
                 { label: 'Frequency', value: roundFrequency },
                 { label: 'Push Rule', value: pushRule },
                 { label: 'All-Lose Rule', value: allLoseRule },
                 { label: 'Pool Type', value: isTeamPool ? `Team (${teamSize} per team)` : 'Solo' },
-                { label: 'Prize Type', value: poolType === 'free' ? 'Free (Gold Coins)' : 'Cash (Sweeps Coins)' },
+                { label: 'Prize Type', value: poolType === 'free' ? 'Free (Sharpr Coins)' : 'Cash (Sharpr Cash)' },
                 { label: 'Max Entries', value: maxEntries || 'Unlimited' },
               ].map(item => (
                 <div key={item.label} className="bg-gray-800 rounded-lg px-3 py-2">

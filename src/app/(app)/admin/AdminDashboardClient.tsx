@@ -8,16 +8,18 @@ import toast from 'react-hot-toast';
 import { Shield } from 'lucide-react';
 import Link from 'next/link';
 
-const TABS = ['Pools', 'Grade Picks', 'Users & Coins', 'Actions Log'];
+const TABS = ['Pools', 'Grade Picks', 'Users & Coins', 'Withdrawals', 'Actions Log'];
 
 interface Props {
   pools: any[];
   pendingPicks: any[];
   adminActions: any[];
+  withdrawalRequests: any[];
 }
 
-export function AdminDashboardClient({ pools: initialPools, pendingPicks: initialPicks, adminActions }: Props) {
+export function AdminDashboardClient({ pools: initialPools, pendingPicks: initialPicks, adminActions, withdrawalRequests: initialWithdrawals }: Props) {
   const [activeTab, setActiveTab] = useState('Pools');
+  const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
   const [picks, setPicks] = useState(initialPicks);
   const [gradingId, setGradingId] = useState<string | null>(null);
   const [autoGrading, setAutoGrading] = useState(false);
@@ -198,6 +200,18 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
     else toast.success('Pool completed and winner crowned!');
   };
 
+  const updateWithdrawal = async (id: string, status: 'approved' | 'paid' | 'rejected', note?: string) => {
+    const res = await fetch('/api/admin/withdrawals', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status, admin_note: note }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error || 'Failed to update'); return; }
+    toast.success(`Withdrawal marked ${status}`);
+    setWithdrawals(prev => prev.map(w => w.id === id ? { ...w, status, admin_note: note ?? w.admin_note } : w));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -243,6 +257,11 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
             {tab === 'Grade Picks' && picks.length > 0 && (
               <span className="ml-2 bg-yellow-500 text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
                 {picks.length}
+              </span>
+            )}
+            {tab === 'Withdrawals' && withdrawals.filter(w => w.status === 'pending').length > 0 && (
+              <span className="ml-2 bg-green-500 text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
+                {withdrawals.filter(w => w.status === 'pending').length}
               </span>
             )}
           </button>
@@ -434,6 +453,59 @@ export function AdminDashboardClient({ pools: initialPools, pendingPicks: initia
               </Button>
             </CardBody>
           </Card>
+        </div>
+      )}
+
+      {/* Withdrawals Tab */}
+      {activeTab === 'Withdrawals' && (
+        <div className="space-y-3">
+          {withdrawals.length === 0 ? (
+            <Card><CardBody className="text-center py-8 text-gray-500">No withdrawal requests yet.</CardBody></Card>
+          ) : (
+            withdrawals.map((w: any) => (
+              <Card key={w.id}>
+                <CardBody className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-white">{w.profiles?.username ?? w.user_id}</div>
+                      <div className="text-xs text-gray-500">{new Date(w.created_at).toLocaleString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-black text-green-400">${(w.amount_cents / 100).toFixed(2)}</div>
+                      <div className="text-xs text-gray-500 capitalize">{w.payment_method}</div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-300 break-all">
+                    {w.payment_handle}
+                  </div>
+                  {w.admin_note && (
+                    <div className="text-xs text-gray-500 italic">{w.admin_note}</div>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      w.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                      w.status === 'approved' ? 'bg-blue-500/20 text-blue-400' :
+                      w.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>{w.status}</span>
+                    {w.status === 'pending' && (
+                      <>
+                        <Button size="sm" variant="primary" onClick={() => updateWithdrawal(w.id, 'approved')}>Approve</Button>
+                        <Button size="sm" variant="primary" onClick={() => updateWithdrawal(w.id, 'paid')}>Mark Paid</Button>
+                        <Button size="sm" onClick={() => {
+                          const note = prompt('Rejection reason (shown to user):');
+                          if (note !== null) updateWithdrawal(w.id, 'rejected', note);
+                        }} className="text-red-400 border-red-800 hover:bg-red-900/30">Reject</Button>
+                      </>
+                    )}
+                    {w.status === 'approved' && (
+                      <Button size="sm" variant="primary" onClick={() => updateWithdrawal(w.id, 'paid')}>Mark Paid</Button>
+                    )}
+                  </div>
+                </CardBody>
+              </Card>
+            ))
+          )}
         </div>
       )}
 

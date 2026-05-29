@@ -43,8 +43,15 @@ export async function POST(request: NextRequest) {
 
   // $4,999 max prize pool per contest — stays under FL §849.094 $5,000 filing threshold
   const MAX_PRIZE_POOL = 499_900;
+  const MIN_CASH_ENTRY_CENTS = 100; // $1.00 minimum Sharpr Cash entry fee for cash pools
   const feeCoins = entry_fee_coins ?? 0;
   const feeCents = entry_fee_cents ?? 0;
+
+  if (pool_type === 'cash' && feeCents < MIN_CASH_ENTRY_CENTS) {
+    return NextResponse.json({
+      error: 'Cash contests require a minimum entry fee of $1.00 Sharpr Cash.',
+    }, { status: 400 });
+  }
   const rake = rake_percentage ?? 10;
   if (max_entries && (feeCoins > 0 || feeCents > 0)) {
     const netCoins  = Math.round(feeCoins  * max_entries * (1 - rake / 100));

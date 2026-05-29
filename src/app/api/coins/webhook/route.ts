@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
   // Credit coins
   const { data: profile } = await supabase
     .from('profiles')
-    .select('gold_coins, sweeps_coins, lifetime_gold_purchased, deposit_spent_today_cents, deposit_window_start')
+    .select('gold_coins, sweeps_coins, lifetime_gold_purchased, lifetime_sc_purchased, deposit_spent_today_cents, deposit_window_start')
     .eq('id', userId)
     .single();
 
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     gold_coins: profile.gold_coins + goldAmount,
     sweeps_coins: profile.sweeps_coins + sweepsAmount,
     lifetime_gold_purchased: (profile.lifetime_gold_purchased ?? 0) + goldAmount,
+    lifetime_sc_purchased: (profile.lifetime_sc_purchased ?? 0) + sweepsAmount,
     deposit_spent_today_cents: newSpent,
     deposit_window_start: windowExpired ? new Date().toISOString() : profile.deposit_window_start,
   }).eq('id', userId);

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 
-const DAILY_GOLD = 250;         // Sharpr Coins for everyone
+const DAILY_GOLD = 25;          // Sharpr Coins for everyone (10 coins per $1, so 25 = $2.50 value)
 const DAILY_SWEEPS = 20;        // $0.20 Sharpr Cash for everyone (stored as cents)
 const DAILY_SWEEPS_PAID = 40;   // $0.40 Sharpr Cash for paid players (stored as cents)
 

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Trophy, ChevronDown, Shield, LogOut, User } from 'lucide-react';
+import { Menu, X, Trophy, ChevronDown, Shield, LogOut, User, ArrowDownToLine } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Avatar } from '@/components/ui/Avatar';
 import { CoinBalance } from '@/components/nav/CoinBalance';
@@ -53,6 +53,14 @@ export function Navbar({ profile }: NavbarProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            {profile && (
+              <Link
+                href="/coins"
+                className="hidden sm:flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black text-xs font-black px-3 py-1.5 rounded-lg transition-colors"
+              >
+                💵 Get Cash
+              </Link>
+            )}
             {profile && <CoinBalance initialGold={profile.gold_coins ?? 0} initialSweeps={profile.sweeps_coins ?? 0} />}
             {profile ? (
               <div className="relative">
@@ -74,6 +82,13 @@ export function Navbar({ profile }: NavbarProps) {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <User size={16} /> Profile
+                      </Link>
+                      <Link
+                        href="/withdraw"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-green-400 hover:text-green-300 hover:bg-gray-800 transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <ArrowDownToLine size={16} /> Withdraw
                       </Link>
                       {profile.role === 'admin' && (
                         <Link
@@ -138,6 +153,9 @@ export function Navbar({ profile }: NavbarProps) {
                 </Link>
                 <Link href={`/profile/${profile.username}`} className="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors" onClick={() => setMobileOpen(false)}>
                   Profile
+                </Link>
+                <Link href="/withdraw" className="block px-4 py-2 text-green-400 hover:text-green-300 hover:bg-gray-800 rounded-lg transition-colors" onClick={() => setMobileOpen(false)}>
+                  Withdraw
                 </Link>
                 {profile.role === 'admin' && (
                   <Link href="/admin" className="block px-4 py-2 text-purple-400 hover:text-purple-300 hover:bg-gray-800 rounded-lg transition-colors" onClick={() => setMobileOpen(false)}>

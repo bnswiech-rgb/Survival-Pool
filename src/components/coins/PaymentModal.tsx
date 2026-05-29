@@ -176,7 +176,7 @@ export default function PaymentModal({ packId, customGold, onClose, onSuccess }:
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={handleBackdrop}
     >
-      <div className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ export default function PaymentModal({ packId, customGold, onClose, onSuccess }:
           </button>
         </div>
 
-        <div className="p-5">
+        <div className="p-5 overflow-y-auto flex-1">
           {fetchError ? (
             <div className="text-center space-y-3 py-4">
               <div className="text-red-400 text-sm">{fetchError}</div>

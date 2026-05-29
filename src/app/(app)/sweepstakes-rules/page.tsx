@@ -115,7 +115,7 @@ export default function SweepstakesRulesPage() {
           <p>Sharpr Cash won in contests may be redeemed for prizes as follows:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li>Prizes are offered in the form of cash equivalent payments (e.g., ACH transfer, PayPal, or check) at a rate of 1 Sharpr Cash = $1.00 USD, subject to minimum redemption thresholds and verification.</li>
-            <li>Minimum redemption: $50.00 Sharpr Cash. Subject to change with notice.</li>
+            <li>Minimum redemption: $25.00 Sharpr Cash. Subject to change with notice.</li>
             <li>Sharpr Cash must be wagered at least once in a contest before it is eligible for redemption (1x playthrough requirement).</li>
             <li>Redemption requests are subject to identity verification and eligibility confirmation. Sponsor may require government-issued photo ID and proof of address.</li>
             <li>Winners may be required to complete an IRS Form W-9 (U.S. residents) before prize payment is issued. All prizes are subject to applicable federal, state, and local taxes. Winners are solely responsible for all taxes on prizes received.</li>

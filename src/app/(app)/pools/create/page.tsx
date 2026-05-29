@@ -261,12 +261,40 @@ export default function CreatePoolPage() {
         </Card>
       )}
 
-      {/* Step 3: Entry & Prize — coin entry hidden until payments go live */}
+      {/* Step 3: Entry & Prize */}
       {step === 3 && (
         <Card>
           <CardHeader><h3 className="font-bold text-white">Entry Fee & Prize</h3></CardHeader>
-          <CardBody>
-            <p className="text-sm text-gray-400">All contests are free to enter during beta.</p>
+          <CardBody className="space-y-4">
+            {poolType === 'free' ? (
+              <>
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-3 py-2 text-blue-400 text-sm">
+                  Free pools award Gold Coins to the winner. No cash prizes.
+                </div>
+                <Input
+                  label="Entry Fee (Gold Coins)"
+                  type="number"
+                  value={entryFeeCoins}
+                  onChange={e => setEntryFeeCoins(e.target.value)}
+                  min="0"
+                  hint="Set to 0 for a completely free contest. Gold Coins have no cash value."
+                />
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 text-yellow-400 text-sm">
+                  Cash pools use Sweeps Coins redeemable for real prizes. Entry fees are set in Gold Coins. Prize pool is capped at $4,999.
+                </div>
+                <Input
+                  label="Entry Fee (Gold Coins)"
+                  type="number"
+                  value={entryFeeCoins}
+                  onChange={e => setEntryFeeCoins(e.target.value)}
+                  min="0"
+                  hint="Gold Coins required to enter. 100 GC = $1.00 USD."
+                />
+              </div>
+            )}
           </CardBody>
         </Card>
       )}

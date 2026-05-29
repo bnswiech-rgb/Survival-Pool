@@ -60,7 +60,7 @@ export default function SweepstakesRulesPage() {
           <p>Sweeps Coins may be obtained at no cost through the following methods:</p>
           <ul className="list-disc pl-5 space-y-2">
             <li>
-              <strong className="text-white">Daily Free Bonus:</strong> Registered users may claim a daily free bonus of 50 SC once per calendar day (UTC). No purchase required. Log in and click "Claim" on the dashboard.
+              <strong className="text-white">Daily Free Bonus:</strong> Registered users may claim a daily free bonus of 250 GC + 5 SC once per calendar day (UTC). No purchase required. Log in and click "Claim" on the coins page.
             </li>
             <li>
               <strong className="text-white">Alternate Method of Entry (AMOE) — Mail-In:</strong> To receive 50 SC at no cost, hand-print your full legal name, mailing address, email address associated with your Sharpr account, and the statement "I am requesting my free Sweeps Coins" on a 3×5 inch card and mail it to:

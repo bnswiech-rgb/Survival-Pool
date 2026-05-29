@@ -15,8 +15,9 @@ const COIN_PACKS: CoinPack[] = [
   { id: 'elite',   label: 'Elite',   price_cents: 5000, gold_coins: 6500, sweeps_coins: 4500 },
 ];
 
-function cashToCoins(cash: number) { return Math.round((cash / 0.8) * 100); }
-function cashToPrice(cash: number) { return cash / 0.8; }
+// User enters spend amount → derive coins and SC received (80% back as cash)
+function spendToCoins(spend: number) { return Math.round(spend * 100); }
+function spendToCashDisplay(spend: number) { return (spend * 0.8).toFixed(2); }
 
 
 export default function CoinsPage() {
@@ -60,10 +61,10 @@ export default function CoinsPage() {
     }
   };
 
-  const customCashNum = parseFloat(customCash) || 0;
-  const customValid = customCashNum >= 1 && customCashNum <= 800;
-  const customCoinsNeeded = cashToCoins(customCashNum);
-  const customPriceNum = cashToPrice(customCashNum);
+  const customSpendNum = parseFloat(customCash) || 0;
+  const customValid = customSpendNum >= 1 && customSpendNum <= 1000;
+  const customCoins = spendToCoins(customSpendNum);
+  const customSCDisplay = spendToCashDisplay(customSpendNum);
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
@@ -122,29 +123,30 @@ export default function CoinsPage() {
               <input
                 type="number"
                 min="1"
-                max="800"
+                max="1000"
                 step="1"
                 placeholder="0.00"
                 value={customCash}
                 onChange={e => setCustomCash(e.target.value)}
                 className="flex-1 bg-transparent text-white text-2xl font-bold focus:outline-none placeholder-gray-700"
               />
-              <span className="text-gray-500 text-sm font-medium">USD</span>
             </div>
 
-            {customCashNum >= 1 && (
+            {customSpendNum >= 1 && (
               <div className="text-xs text-gray-500 px-1">
-                Requires <span className="text-yellow-400">{customCoinsNeeded.toLocaleString()} Sharpr Coins</span> • Total: <span className="text-white">${customPriceNum.toFixed(2)}</span>
+                You receive: <span className="text-green-400 font-semibold">${customSCDisplay} Sharpr Cash</span>
+                {' + '}
+                <span className="text-yellow-400 font-semibold">{customCoins.toLocaleString()} Sharpr Coins</span>
               </div>
             )}
 
             <button
-              onClick={() => openModal('custom', customCoinsNeeded)}
+              onClick={() => openModal('custom', customCoins)}
               disabled={!customValid}
               className="w-full py-3 rounded-xl font-black text-base bg-green-500 hover:bg-green-400 text-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {customValid
-                ? `Get $${parseFloat(customCash).toFixed(2)} Sharpr Cash`
+                ? `Buy for $${parseFloat(customCash).toFixed(2)}`
                 : 'Enter an amount'}
             </button>
           </div>

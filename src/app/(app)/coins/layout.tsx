@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation';
-
-export default function CoinsLayout() {
-  redirect('/dashboard');
+export default function CoinsLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }

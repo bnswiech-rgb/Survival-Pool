@@ -73,9 +73,11 @@ export default function CoinsPage() {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-black text-white">Get Coins</h1>
-        <p className="text-gray-400">
-          Gold Coins enter you into contests. Every purchase includes bonus Sweeps Coins — redeem them for cash prizes.
-        </p>
+        <p className="text-gray-400">Purchase Gold Coins to enter contests and receive bonus Sweeps Coins.</p>
+        <div className="flex items-center justify-center gap-6 pt-1 text-sm">
+          <span><span className="text-yellow-400 font-bold">🪙 Gold Coins</span> — contest entry only, no cash value</span>
+          <span><span className="text-green-400 font-bold">💎 Sweeps Coins</span> — redeemable for real cash prizes</span>
+        </div>
       </div>
 
       {/* Daily bonus */}

@@ -5,10 +5,10 @@ import type { CoinPack } from '@/types';
 
 // sweeps_coins stored in cents of Sharpr Cash (÷100 = dollar value, 1 Sharpr Cash = $1.00)
 const COIN_PACKS: Record<string, CoinPack> = {
-  starter: { id: 'starter', label: 'Starter',  price_cents: 499,  gold_coins: 500,  sweeps_coins: 400  },
-  player:  { id: 'player',  label: 'Player',   price_cents: 999,  gold_coins: 1100, sweeps_coins: 800  },
-  pro:     { id: 'pro',     label: 'Pro',       price_cents: 1999, gold_coins: 2400, sweeps_coins: 1600 },
-  elite:   { id: 'elite',   label: 'Elite',     price_cents: 4999, gold_coins: 6500, sweeps_coins: 4000 },
+  starter: { id: 'starter', label: 'Starter',  price_cents: 500,  gold_coins: 500,  sweeps_coins: 400  },
+  player:  { id: 'player',  label: 'Player',   price_cents: 1000, gold_coins: 1100, sweeps_coins: 800  },
+  pro:     { id: 'pro',     label: 'Pro',       price_cents: 2000, gold_coins: 2400, sweeps_coins: 1600 },
+  elite:   { id: 'elite',   label: 'Elite',     price_cents: 5000, gold_coins: 6500, sweeps_coins: 4500 },
 };
 
 // Custom: 100 Sharpr Coins = $1.00, 80% back as Sharpr Cash (stored in cents)

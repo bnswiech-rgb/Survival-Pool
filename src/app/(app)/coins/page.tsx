@@ -11,10 +11,10 @@ const PaymentModal = dynamic(() => import('@/components/coins/PaymentModal'), { 
 // Stored sweeps_coins are in cents of Sharpr Cash (÷100 = dollars)
 // 1 Sharpr Cash = $1.00 redeemable
 const COIN_PACKS: CoinPack[] = [
-  { id: 'starter', label: 'Starter', price_cents: 499,  gold_coins: 500,  sweeps_coins: 400  },
-  { id: 'player',  label: 'Player',  price_cents: 999,  gold_coins: 1100, sweeps_coins: 800,  popular: true },
-  { id: 'pro',     label: 'Pro',     price_cents: 1999, gold_coins: 2400, sweeps_coins: 1600 },
-  { id: 'elite',   label: 'Elite',   price_cents: 4999, gold_coins: 6500, sweeps_coins: 4000 },
+  { id: 'starter', label: 'Starter', price_cents: 500,  gold_coins: 500,  sweeps_coins: 400  },
+  { id: 'player',  label: 'Player',  price_cents: 1000, gold_coins: 1100, sweeps_coins: 800,  popular: true },
+  { id: 'pro',     label: 'Pro',     price_cents: 2000, gold_coins: 2400, sweeps_coins: 1600 },
+  { id: 'elite',   label: 'Elite',   price_cents: 5000, gold_coins: 6500, sweeps_coins: 4500 },
 ];
 
 const PACK_ICONS = [Coins, Zap, Star, Crown];
@@ -22,7 +22,6 @@ const PACK_ICONS = [Coins, Zap, Star, Crown];
 // Custom: 100 Sharpr Coins = $1.00, 80% back as Sharpr Cash
 function customPrice(coins: number) { return (coins / 100).toFixed(2); }
 function customCash(coins: number) { return (Math.floor(coins * 0.8) / 100).toFixed(2); }
-function customCashStored(coins: number) { return Math.floor(coins * 0.8); }
 
 export default function CoinsPage() {
   const [modal, setModal] = useState<{ packId: string; customGold?: number } | null>(null);

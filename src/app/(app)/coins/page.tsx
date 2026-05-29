@@ -57,6 +57,7 @@ export default function CoinsPage() {
       if (!res.ok) throw new Error(data.error);
       setDailyClaimed(true);
       setDailyClaimable(false);
+      window.dispatchEvent(new Event('coins:updated'));
     } catch (err: any) {
       alert(err.message);
     } finally {

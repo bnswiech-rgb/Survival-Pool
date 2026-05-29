@@ -87,19 +87,25 @@ export default function CoinsPage() {
         </div>
       )}
 
-      {restricted ? (
-        /* Restricted state */
+      {restricted || true ? (
+        /* Purchases temporarily unavailable */
         <div className="space-y-6">
           <div className="text-center space-y-1">
             <h1 className="text-3xl font-black text-white">Sharpr Cash</h1>
-            <p className="text-gray-500 text-sm">Cash prize contests are not available in your state.</p>
+            {restricted
+              ? <p className="text-gray-500 text-sm">Cash prize contests are not available in your state.</p>
+              : <p className="text-gray-500 text-sm">Coin purchases are temporarily unavailable.</p>
+            }
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5 text-center space-y-2">
             <Lock size={24} className="text-gray-500 mx-auto" />
-            <div className="font-bold text-white">Free Play Only</div>
+            <div className="font-bold text-white">{restricted ? 'Free Play Only' : 'Coming Back Soon'}</div>
             <p className="text-sm text-gray-400">
-              You can still play free pools and earn Sharpr Coins daily.
-              See <a href="/sweepstakes-rules" className="underline hover:text-gray-300">Official Rules</a> for alternate entry options.
+              {restricted
+                ? 'You can still play free pools and earn Sharpr Coins daily. See '
+                : 'We\'re upgrading our payment system. You can still play free pools and claim your daily bonus. Check back soon. See '
+              }
+              <a href="/sweepstakes-rules" className="underline hover:text-gray-300">Official Rules</a> for alternate entry options.
             </p>
           </div>
         </div>

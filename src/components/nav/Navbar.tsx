@@ -53,14 +53,7 @@ export function Navbar({ profile }: NavbarProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            {profile && (
-              <Link
-                href="/coins"
-                className="hidden sm:flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black text-xs font-black px-3 py-1.5 rounded-lg transition-colors"
-              >
-                💵 Get Cash
-              </Link>
-            )}
+            {/* Get Cash button hidden while payment processor is being updated */}
             {profile && <CoinBalance initialGold={profile.gold_coins ?? 0} initialSweeps={profile.sweeps_coins ?? 0} />}
             {profile ? (
               <div className="relative">

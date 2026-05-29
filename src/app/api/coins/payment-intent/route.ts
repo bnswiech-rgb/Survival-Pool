@@ -3,16 +3,18 @@ import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 import type { CoinPack } from '@/types';
 
+// sweeps_coins stored in cents of Sharpr Cash (÷100 = dollar value, 1 Sharpr Cash = $1.00)
 const COIN_PACKS: Record<string, CoinPack> = {
-  starter: { id: 'starter', label: 'Starter',  price_cents: 499,  gold_coins: 500,  sweeps_coins: 5  },
-  player:  { id: 'player',  label: 'Player',   price_cents: 999,  gold_coins: 1100, sweeps_coins: 11 },
-  pro:     { id: 'pro',     label: 'Pro',       price_cents: 1999, gold_coins: 2400, sweeps_coins: 24 },
-  elite:   { id: 'elite',   label: 'Elite',     price_cents: 4999, gold_coins: 6500, sweeps_coins: 65 },
+  starter: { id: 'starter', label: 'Starter',  price_cents: 499,  gold_coins: 500,  sweeps_coins: 400  },
+  player:  { id: 'player',  label: 'Player',   price_cents: 999,  gold_coins: 1100, sweeps_coins: 800  },
+  pro:     { id: 'pro',     label: 'Pro',       price_cents: 1999, gold_coins: 2400, sweeps_coins: 1600 },
+  elite:   { id: 'elite',   label: 'Elite',     price_cents: 4999, gold_coins: 6500, sweeps_coins: 4000 },
 };
 
+// Custom: 100 Sharpr Coins = $1.00, 80% back as Sharpr Cash (stored in cents)
 function buildCustomPack(goldCoins: number): CoinPack {
   const price_cents = Math.round((goldCoins / 100) * 100);
-  const sweeps_coins = Math.floor(goldCoins / 100);
+  const sweeps_coins = Math.floor(goldCoins * 0.8);
   return { id: 'custom', label: 'Custom', price_cents, gold_coins: goldCoins, sweeps_coins };
 }
 

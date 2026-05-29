@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-const SWEEPS_AWARD = 50;
+const SWEEPS_AWARD = 20; // $0.20 Sharpr Cash (stored as cents, 1 Sharpr Cash = $1.00)
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (existing) {
-    return NextResponse.json({ error: 'You have already claimed your free Sweeps Coins today. Come back tomorrow.' }, { status: 400 });
+    return NextResponse.json({ error: 'You have already claimed your free Sharpr Cash today. Come back tomorrow.' }, { status: 400 });
   }
 
   // Award Sweeps Coins

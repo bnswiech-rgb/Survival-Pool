@@ -3,17 +3,18 @@ import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 import type { CoinPack } from '@/types';
 
+// sweeps_coins stored in cents of Sharpr Cash (÷100 = dollar value, 1 Sharpr Cash = $1.00)
 const COIN_PACKS: Record<string, CoinPack> = {
-  starter: { id: 'starter', label: 'Starter',  price_cents: 499,  gold_coins: 500,  sweeps_coins: 5  },
-  player:  { id: 'player',  label: 'Player',   price_cents: 999,  gold_coins: 1100, sweeps_coins: 11 },
-  pro:     { id: 'pro',     label: 'Pro',       price_cents: 1999, gold_coins: 2400, sweeps_coins: 24 },
-  elite:   { id: 'elite',   label: 'Elite',     price_cents: 4999, gold_coins: 6500, sweeps_coins: 65 },
+  starter: { id: 'starter', label: 'Starter',  price_cents: 499,  gold_coins: 500,  sweeps_coins: 400  },
+  player:  { id: 'player',  label: 'Player',   price_cents: 999,  gold_coins: 1100, sweeps_coins: 800  },
+  pro:     { id: 'pro',     label: 'Pro',       price_cents: 1999, gold_coins: 2400, sweeps_coins: 1600 },
+  elite:   { id: 'elite',   label: 'Elite',     price_cents: 4999, gold_coins: 6500, sweeps_coins: 4000 },
 };
 
-// Custom amount: 100 GC = $1.00, 1 SC per 100 GC (no bulk discount)
+// Custom: 100 Sharpr Coins = $1.00, 80% back as Sharpr Cash (stored in cents)
 function buildCustomPack(goldCoins: number): CoinPack {
-  const price_cents = Math.round((goldCoins / 100) * 100); // $1 per 100 GC
-  const sweeps_coins = Math.floor(goldCoins / 100);
+  const price_cents = Math.round((goldCoins / 100) * 100);
+  const sweeps_coins = Math.floor(goldCoins * 0.8);
   return { id: 'custom', label: 'Custom', price_cents, gold_coins: goldCoins, sweeps_coins };
 }
 
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
       gold_delta: pack.gold_coins,
       sweeps_delta: pack.sweeps_coins,
       transaction_type: 'purchase',
-      note: `Dev grant: ${pack.label} pack`,
+      note: `Dev grant: ${pack.label} pack — ${pack.gold_coins} coins + $${(pack.sweeps_coins / 100).toFixed(2)} cash`,
     });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -104,8 +105,8 @@ export async function POST(request: NextRequest) {
           currency: 'usd',
           unit_amount: pack.price_cents,
           product_data: {
-            name: `${pack.label} Pack — ${pack.gold_coins.toLocaleString()} Gold Coins`,
-            description: `Includes ${pack.sweeps_coins} Sweeps Coins`,
+            name: `${pack.label} Pack — ${pack.gold_coins.toLocaleString()} Sharpr Coins`,
+            description: `Includes $${(pack.sweeps_coins / 100).toFixed(2)} Sharpr Cash FREE`,
           },
         },
         quantity: 1,

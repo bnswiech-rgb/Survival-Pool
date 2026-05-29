@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Coins } from 'lucide-react';
+import { Coins, DollarSign } from 'lucide-react';
 
 interface Props {
   initialGold: number;
@@ -24,9 +24,7 @@ export function CoinBalance({ initialGold, initialSweeps }: Props) {
   }, [gold, sweeps]);
 
   useEffect(() => {
-    // Refresh balance when window regains focus (e.g. after claiming on another tab)
     window.addEventListener('focus', refresh);
-    // Also listen for a custom event dispatched after daily claim
     window.addEventListener('coins:updated', refresh as EventListener);
     return () => {
       window.removeEventListener('focus', refresh);
@@ -37,13 +35,17 @@ export function CoinBalance({ initialGold, initialSweeps }: Props) {
   return (
     <Link
       href="/coins"
-      className="hidden sm:flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+      className="hidden sm:flex items-center gap-2 bg-gray-800/80 hover:bg-gray-700/80 border border-gray-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
     >
-      <Coins size={14} />
-      <span>{gold.toLocaleString()} GC</span>
-      {sweeps > 0 && (
-        <span className="text-green-400 ml-1">{sweeps.toLocaleString()} SC</span>
-      )}
+      <span className="flex items-center gap-1 text-yellow-400">
+        <Coins size={13} />
+        {gold.toLocaleString()}
+      </span>
+      <span className="text-gray-600">|</span>
+      <span className="flex items-center gap-1 text-green-400">
+        <DollarSign size={13} />
+        {(sweeps / 100).toFixed(2)}
+      </span>
     </Link>
   );
 }

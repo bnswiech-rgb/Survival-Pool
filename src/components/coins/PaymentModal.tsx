@@ -70,9 +70,9 @@ function CheckoutForm({
         <div>
           <div className="font-bold text-white text-lg">{pack.label} Pack</div>
           <div className="text-sm text-gray-400 mt-0.5">
-            <span className="text-yellow-400 font-semibold">{pack.gold_coins.toLocaleString()} GC</span>
+            <span className="text-yellow-400 font-semibold">{pack.gold_coins.toLocaleString()} Sharpr Coins</span>
             {' + '}
-            <span className="text-green-400 font-semibold">{pack.sweeps_coins} SC</span>
+            <span className="text-green-400 font-semibold">${(pack.sweeps_coins / 100).toFixed(2)} Sharpr Cash FREE</span>
           </div>
         </div>
         <div className="text-2xl font-black text-white">${(pack.price_cents / 100).toFixed(2)}</div>

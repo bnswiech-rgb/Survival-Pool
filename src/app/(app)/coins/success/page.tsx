@@ -7,6 +7,7 @@ interface Props {
 
 export default async function CoinsSuccessPage({ searchParams }: Props) {
   const { pack, gold, sweeps } = await searchParams;
+  const cashValue = sweeps ? (parseInt(sweeps) / 100).toFixed(2) : null;
   return (
     <div className="max-w-md mx-auto text-center space-y-6 py-16">
       <CheckCircle2 size={56} className="text-green-400 mx-auto" />
@@ -18,18 +19,18 @@ export default async function CoinsSuccessPage({ searchParams }: Props) {
           </p>
         )}
       </div>
-      {(gold || sweeps) && (
+      {(gold || cashValue) && (
         <div className="flex items-center justify-center gap-6 bg-gray-900 border border-gray-800 rounded-xl p-4">
           {gold && (
             <div>
               <div className="text-2xl font-black text-yellow-400">+{parseInt(gold).toLocaleString()}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Gold Coins</div>
+              <div className="text-xs text-gray-500 mt-0.5">Sharpr Coins</div>
             </div>
           )}
-          {sweeps && (
+          {cashValue && (
             <div>
-              <div className="text-2xl font-black text-green-400">+{parseInt(sweeps).toLocaleString()}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Sweeps Coins</div>
+              <div className="text-2xl font-black text-green-400">+${cashValue}</div>
+              <div className="text-xs text-gray-500 mt-0.5">Sharpr Cash</div>
             </div>
           )}
         </div>

@@ -89,7 +89,7 @@ export default function CoinsPage() {
               <div>
                 <div className="font-bold text-white">Daily Login Bonus</div>
                 <div className="text-sm text-gray-400">
-                  {dailyClaimed ? '✅ Claimed for today — come back tomorrow!' : 'Claim 50 GC + 5 SC free every day'}
+                  {dailyClaimed ? '✅ Claimed for today — come back tomorrow!' : 'Claim 250 GC + 5 SC free every day'}
                 </div>
               </div>
             </div>

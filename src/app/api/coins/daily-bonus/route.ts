@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 const DAILY_GOLD = 250;
-const DAILY_SWEEPS = 50;
+const DAILY_SWEEPS = 5;
 
 function nextMidnightUTC(): Date {
   const now = new Date();

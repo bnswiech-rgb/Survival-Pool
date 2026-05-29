@@ -39,9 +39,11 @@ export default function CoinsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to start checkout');
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
       if (data.url) window.location.href = data.url;
+      else throw new Error('No checkout URL returned');
     } catch (err: any) {
       alert(err.message);
     } finally {

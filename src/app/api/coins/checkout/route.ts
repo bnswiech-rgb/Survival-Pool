@@ -89,31 +89,40 @@ export async function POST(request: NextRequest) {
   }
 
   const stripe = new Stripe(stripeKey, { apiVersion: '2026-04-22.dahlia' });
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    payment_method_types: ['card'],
-    line_items: [{
-      price_data: {
-        currency: 'usd',
-        unit_amount: pack.price_cents,
-        product_data: {
-          name: `${pack.label} Pack — ${pack.gold_coins.toLocaleString()} Gold Coins`,
-          description: `Includes ${pack.sweeps_coins} Sweeps Coins`,
+  // Derive app URL from request headers — works on any domain/preview URL
+  const origin = request.headers.get('origin') ?? request.headers.get('x-forwarded-host')
+    ? `https://${request.headers.get('x-forwarded-host')}`
+    : (process.env.NEXT_PUBLIC_APP_URL ?? 'https://survival-pool.vercel.app');
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          unit_amount: pack.price_cents,
+          product_data: {
+            name: `${pack.label} Pack — ${pack.gold_coins.toLocaleString()} Gold Coins`,
+            description: `Includes ${pack.sweeps_coins} Sweeps Coins`,
+          },
         },
+        quantity: 1,
+      }],
+      metadata: {
+        user_id: user.id,
+        pack_id: pack.id,
+        gold_coins: pack.gold_coins,
+        sweeps_coins: pack.sweeps_coins,
       },
-      quantity: 1,
-    }],
-    metadata: {
-      user_id: user.id,
-      pack_id: pack.id,
-      gold_coins: pack.gold_coins,
-      sweeps_coins: pack.sweeps_coins,
-    },
-    success_url: `${appUrl}/coins/success?pack=${pack.label}&gold=${pack.gold_coins}&sweeps=${pack.sweeps_coins}`,
-    cancel_url: `${appUrl}/coins`,
-  });
+      success_url: `${origin}/coins/success?pack=${pack.label}&gold=${pack.gold_coins}&sweeps=${pack.sweeps_coins}`,
+      cancel_url: `${origin}/coins`,
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err: any) {
+    console.error('[checkout] Stripe error:', err.message);
+    return NextResponse.json({ error: err.message ?? 'Failed to create checkout session' }, { status: 500 });
+  }
 }

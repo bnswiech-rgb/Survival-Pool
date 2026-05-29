@@ -178,7 +178,7 @@ export default function CoinsPage() {
                     </span>
                   )}
                   {/* Cash amount */}
-                  <div className="text-xl font-black text-green-400">${cashValue}</div>
+                  <div className="text-xl font-black text-green-400">💵 {cashValue}</div>
                   <div className="h-px bg-gray-800" />
                   {/* Coins */}
                   <div className="text-xs text-yellow-400 font-semibold">{pack.gold_coins.toLocaleString()} coins</div>

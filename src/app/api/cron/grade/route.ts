@@ -214,12 +214,11 @@ export async function GET(request: NextRequest) {
 
   if (teamSportPicks.length > 0) {
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setUTCDate(today.getUTCDate() - 1);
-    const twoDaysAgo = new Date(today);
-    twoDaysAgo.setUTCDate(today.getUTCDate() - 2);
-    // Check 2 days ago + yesterday + today to cover games from multi-day rounds
-    const datesToCheck = [toESPNDate(twoDaysAgo), toESPNDate(yesterday), toESPNDate(today)];
+    const datesToCheck = [0,1,2,3,4,5,6,7].map(n => {
+      const d = new Date(today);
+      d.setUTCDate(today.getUTCDate() - n);
+      return toESPNDate(d);
+    });
 
     const espnTeamCache: Record<string, any[]> = {};
 
@@ -310,11 +309,11 @@ export async function GET(request: NextRequest) {
     }
 
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setUTCDate(today.getUTCDate() - 1);
-    const twoDaysAgo2 = new Date(today);
-    twoDaysAgo2.setUTCDate(today.getUTCDate() - 2);
-    const datesToFetch = [toESPNDate(twoDaysAgo2), toESPNDate(yesterday), toESPNDate(today)];
+    const datesToFetch = [0,1,2,3,4,5,6,7].map(n => {
+      const d = new Date(today);
+      d.setUTCDate(today.getUTCDate() - n);
+      return toESPNDate(d);
+    });
 
     // Cache ESPN events per league+date
     const espnEventsCache: Record<string, any[]> = {};

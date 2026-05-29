@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Coins, DollarSign } from 'lucide-react';
+import { Coins } from 'lucide-react';
+import { SharprCashIcon } from '@/components/ui/SharprCashIcon';
 
 interface Props {
   initialGold: number;
@@ -43,7 +44,7 @@ export function CoinBalance({ initialGold, initialSweeps }: Props) {
       </span>
       <span className="text-gray-600">|</span>
       <span className="flex items-center gap-1 text-green-400">
-        <DollarSign size={13} />
+        <SharprCashIcon size={14} />
         {(sweeps / 100).toFixed(2)}
       </span>
     </Link>

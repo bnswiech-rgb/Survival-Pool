@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Gift, Lock } from 'lucide-react';
+import { SharprCashIcon } from '@/components/ui/SharprCashIcon';
 import { Card, CardBody } from '@/components/ui/Card';
 import type { CoinPack } from '@/types';
 
@@ -119,7 +120,7 @@ export default function CoinsPage() {
           {/* Custom input */}
           <div className="space-y-2">
             <div className="flex items-center gap-3 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 focus-within:border-green-500 transition-colors">
-              <span className="text-2xl select-none">💵</span>
+              <SharprCashIcon size={28} />
               <input
                 type="number"
                 min="1"
@@ -178,7 +179,10 @@ export default function CoinsPage() {
                     </span>
                   )}
                   {/* Cash amount */}
-                  <div className="text-xl font-black text-green-400">💵 {cashValue}</div>
+                  <div className="flex items-center gap-1.5">
+                    <SharprCashIcon size={18} />
+                    <span className="text-xl font-black text-green-400">{cashValue}</span>
+                  </div>
                   <div className="h-px bg-gray-800" />
                   {/* Coins */}
                   <div className="text-xs text-yellow-400 font-semibold">{pack.gold_coins.toLocaleString()} coins</div>

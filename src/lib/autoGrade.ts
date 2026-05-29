@@ -98,9 +98,9 @@ export async function autoGradePendingPicks(supabase: any): Promise<number> {
 
   if (!pendingPicks?.length) return 0;
 
-  // Dates to check: today + yesterday + 2 days ago
+  // Dates to check: today + up to 7 days ago (covers weekly pools and delayed grading)
   const today = new Date();
-  const dates = [0, 1, 2].map(n => {
+  const dates = [0, 1, 2, 3, 4, 5, 6, 7].map(n => {
     const d = new Date(today);
     d.setUTCDate(today.getUTCDate() - n);
     return toESPNDate(d);
@@ -198,7 +198,21 @@ export async function autoGradePendingPicks(supabase: any): Promise<number> {
       }
     }
 
-    if (!result) continue;
+    // If ESPN couldn't find the result but the game started 24+ hours ago, force void
+    // so the round isn't stuck forever waiting on a game ESPN no longer tracks
+    if (!result) {
+      const hoursSinceStart = pick.game_start_time
+        ? (Date.now() - new Date(pick.game_start_time).getTime()) / (1000 * 60 * 60)
+        : 0;
+      if (hoursSinceStart >= 24) {
+        await supabase
+          .from('picks')
+          .update({ status: 'void', graded_at: new Date().toISOString(), is_locked: true })
+          .eq('id', pick.id);
+        graded++;
+      }
+      continue;
+    }
 
     // Safety check: never grade a pick whose game hasn't started yet
     if (pick.game_start_time && new Date(pick.game_start_time) > new Date()) continue;

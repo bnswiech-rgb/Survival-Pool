@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Coins, Zap, Star, Crown, Gift } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import type { CoinPack } from '@/types';
+
+const PaymentModal = dynamic(() => import('@/components/coins/PaymentModal'), { ssr: false });
 
 const COIN_PACKS: CoinPack[] = [
   { id: 'starter', label: 'Starter', price_cents: 499,  gold_coins: 500,  sweeps_coins: 5  },
@@ -14,12 +17,12 @@ const COIN_PACKS: CoinPack[] = [
 
 const PACK_ICONS = [Coins, Zap, Star, Crown];
 
-// 100 GC = $1.00, 1 SC per 100 GC
 function customPrice(gold: number) { return (gold / 100).toFixed(2); }
 function customSweeps(gold: number) { return Math.floor(gold / 100); }
 
 export default function CoinsPage() {
-  const [loading, setLoading] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ packId: string; customGold?: number } | null>(null);
+  const [success, setSuccess] = useState<{ gold: number; sweeps: number } | null>(null);
   const [customGold, setCustomGold] = useState('');
   const [dailyClaimable, setDailyClaimable] = useState(false);
   const [dailyClaiming, setDailyClaiming] = useState(false);
@@ -29,26 +32,14 @@ export default function CoinsPage() {
     fetch('/api/coins/daily-bonus').then(r => r.json()).then(d => setDailyClaimable(d.claimable));
   }, []);
 
-  const handleBuy = async (packId: string, goldOverride?: number) => {
-    setLoading(packId);
-    try {
-      const body: any = { pack_id: packId };
-      if (packId === 'custom') body.custom_gold = goldOverride;
-      const res = await fetch('/api/coins/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const text = await res.text();
-      const data = text ? JSON.parse(text) : {};
-      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
-      if (data.url) window.location.href = data.url;
-      else throw new Error('No checkout URL returned');
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setLoading(null);
-    }
+  const openModal = (packId: string, customGoldOverride?: number) => {
+    setSuccess(null);
+    setModal({ packId, customGold: customGoldOverride });
+  };
+
+  const handleSuccess = (gold: number, sweeps: number) => {
+    setModal(null);
+    setSuccess({ gold, sweeps });
   };
 
   const handleDailyBonus = async () => {
@@ -81,6 +72,22 @@ export default function CoinsPage() {
           <span><span className="text-green-400 font-bold">💎 Sweeps Coins</span> — redeemable for cash prizes</span>
         </div>
       </div>
+
+      {/* Purchase success banner */}
+      {success && (
+        <div className="bg-green-500/10 border border-green-500/40 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="font-bold text-green-400">Payment successful!</div>
+            <div className="text-sm text-gray-300 mt-0.5">
+              <span className="text-yellow-400 font-semibold">{success.gold.toLocaleString()} GC</span>
+              {' + '}
+              <span className="text-green-400 font-semibold">{success.sweeps} SC</span>
+              {' have been added to your account.'}
+            </div>
+          </div>
+          <button onClick={() => setSuccess(null)} className="text-gray-500 hover:text-white text-xl leading-none">×</button>
+        </div>
+      )}
 
       {/* Daily bonus */}
       <Card className={dailyClaimable || dailyClaimed ? 'border-yellow-500/40' : ''}>
@@ -120,7 +127,6 @@ export default function CoinsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {COIN_PACKS.map((pack, i) => {
             const Icon = PACK_ICONS[i];
-            const isLoading = loading === pack.id;
             return (
               <div key={pack.id} className="relative">
                 {pack.popular && (
@@ -154,15 +160,14 @@ export default function CoinsPage() {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleBuy(pack.id)}
-                      disabled={!!loading}
+                      onClick={() => openModal(pack.id)}
                       className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${
                         pack.popular
                           ? 'bg-green-500 hover:bg-green-400 text-black'
                           : 'bg-gray-700 hover:bg-gray-600 text-white'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      }`}
                     >
-                      {isLoading ? 'Processing…' : `Buy ${pack.label}`}
+                      Buy {pack.label}
                     </button>
                   </CardBody>
                 </Card>
@@ -202,11 +207,11 @@ export default function CoinsPage() {
             )}
           </div>
           <button
-            onClick={() => handleBuy('custom', customGoldNum)}
-            disabled={!customValid || !!loading}
+            onClick={() => openModal('custom', customGoldNum)}
+            disabled={!customValid}
             className="w-full py-2.5 rounded-lg font-bold text-sm bg-yellow-500 hover:bg-yellow-400 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {loading === 'custom' ? 'Processing…' : customValid ? `Buy ${customGoldNum.toLocaleString()} GC for $${customPrice(customGoldNum)}` : 'Enter an amount (min 100 GC)'}
+            {customValid ? `Buy ${customGoldNum.toLocaleString()} GC for $${customPrice(customGoldNum)}` : 'Enter an amount (min 100 GC)'}
           </button>
         </CardBody>
       </Card>
@@ -215,6 +220,16 @@ export default function CoinsPage() {
         Gold Coins have no cash value. Sweeps Coins can be redeemed for prizes per <a href="/sweepstakes-rules" className="underline hover:text-gray-400">Official Rules</a>.
         Must be 18+. Void where prohibited. No purchase necessary — free Sweeps Coins available via <a href="/sweepstakes-rules" className="underline hover:text-gray-400">alternate method of entry</a>.
       </p>
+
+      {/* Payment modal */}
+      {modal && (
+        <PaymentModal
+          packId={modal.packId}
+          customGold={modal.customGold}
+          onClose={() => setModal(null)}
+          onSuccess={handleSuccess}
+        />
+      )}
     </div>
   );
 }

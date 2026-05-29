@@ -21,19 +21,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
-  if (event.type !== 'checkout.session.completed') {
+  // Handle both PaymentIntent and legacy Checkout Session events
+  let userId: string | undefined;
+  let goldCoins: string | undefined;
+  let sweepsCoins: string | undefined;
+  let packId: string | undefined;
+  let paymentIntentId: string | undefined;
+  let amountPaid = 0;
+
+  if (event.type === 'payment_intent.succeeded') {
+    const pi = event.data.object as Stripe.PaymentIntent;
+    userId = pi.metadata?.user_id;
+    goldCoins = pi.metadata?.gold_coins;
+    sweepsCoins = pi.metadata?.sweeps_coins;
+    packId = pi.metadata?.pack_id;
+    paymentIntentId = pi.id;
+    amountPaid = pi.amount;
+  } else if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    userId = session.metadata?.user_id;
+    goldCoins = session.metadata?.gold_coins;
+    sweepsCoins = session.metadata?.sweeps_coins;
+    packId = session.metadata?.pack_id;
+    paymentIntentId = session.payment_intent as string;
+    amountPaid = session.amount_total ?? 0;
+  } else {
     return NextResponse.json({ received: true });
   }
 
-  const session = event.data.object as Stripe.Checkout.Session;
-  const { user_id, gold_coins, sweeps_coins, pack_id } = session.metadata ?? {};
-
-  if (!user_id || !gold_coins || !sweeps_coins) {
+  if (!userId || !goldCoins || !sweepsCoins || !paymentIntentId) {
     return NextResponse.json({ error: 'Missing metadata' }, { status: 400 });
   }
 
-  const goldAmount = parseInt(gold_coins);
-  const sweepsAmount = parseInt(sweeps_coins);
+  const goldAmount = parseInt(goldCoins);
+  const sweepsAmount = parseInt(sweepsCoins);
 
   const supabase = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,7 +65,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await supabase
     .from('coin_transactions')
     .select('id')
-    .eq('stripe_payment_intent_id', session.payment_intent as string)
+    .eq('stripe_payment_intent_id', paymentIntentId)
     .maybeSingle();
 
   if (existing) return NextResponse.json({ received: true });
@@ -53,12 +74,11 @@ export async function POST(request: NextRequest) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('gold_coins, sweeps_coins, lifetime_gold_purchased, deposit_spent_today_cents, deposit_window_start')
-    .eq('id', user_id)
+    .eq('id', userId)
     .single();
 
   if (!profile) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  const amountPaid = session.amount_total ?? 0;
   const windowStart = profile.deposit_window_start ? new Date(profile.deposit_window_start) : null;
   const windowExpired = !windowStart || (Date.now() - windowStart.getTime()) >= 24 * 60 * 60 * 1000;
   const newSpent = (windowExpired ? 0 : (profile.deposit_spent_today_cents ?? 0)) + amountPaid;
@@ -66,18 +86,18 @@ export async function POST(request: NextRequest) {
   await supabase.from('profiles').update({
     gold_coins: profile.gold_coins + goldAmount,
     sweeps_coins: profile.sweeps_coins + sweepsAmount,
-    lifetime_gold_purchased: profile.lifetime_gold_purchased + goldAmount,
+    lifetime_gold_purchased: (profile.lifetime_gold_purchased ?? 0) + goldAmount,
     deposit_spent_today_cents: newSpent,
     deposit_window_start: windowExpired ? new Date().toISOString() : profile.deposit_window_start,
-  }).eq('id', user_id);
+  }).eq('id', userId);
 
   await supabase.from('coin_transactions').insert({
-    user_id,
+    user_id: userId,
     gold_delta: goldAmount,
     sweeps_delta: sweepsAmount,
     transaction_type: 'purchase',
-    stripe_payment_intent_id: session.payment_intent as string,
-    note: `Pack: ${pack_id ?? 'unknown'} — $${((session.amount_total ?? 0) / 100).toFixed(2)}`,
+    stripe_payment_intent_id: paymentIntentId,
+    note: `Pack: ${packId ?? 'unknown'} — $${(amountPaid / 100).toFixed(2)}`,
   });
 
   return NextResponse.json({ received: true });

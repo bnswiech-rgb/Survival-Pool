@@ -11,11 +11,12 @@ const COIN_PACKS: Record<string, CoinPack> = {
   elite:   { id: 'elite',   label: 'Elite',     price_cents: 5000, gold_coins: 6500, sweeps_coins: 4500 },
 };
 
-// Custom: 100 Sharpr Coins = $1.00, 80% back as Sharpr Cash (stored in cents)
+// Custom: coins derived from cash amount (80% ratio). price = coins / 100, cash stored = coins * 0.8
 function buildCustomPack(goldCoins: number): CoinPack {
-  const price_cents = Math.round((goldCoins / 100) * 100);
-  const sweeps_coins = Math.floor(goldCoins * 0.8);
-  return { id: 'custom', label: 'Custom', price_cents, gold_coins: goldCoins, sweeps_coins };
+  const price_cents = Math.round(goldCoins); // goldCoins here is already price_cents (passed from client)
+  const sweeps_coins = Math.round(price_cents * 0.8);
+  const gold_coins = price_cents; // 1 coin per cent = 100 coins per $1
+  return { id: 'custom', label: 'Custom', price_cents, gold_coins, sweeps_coins };
 }
 
 export async function POST(request: NextRequest) {

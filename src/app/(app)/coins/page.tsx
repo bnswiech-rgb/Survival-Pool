@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Coins, Zap, Star, Crown, Gift, Lock } from 'lucide-react';
+import { Zap, Star, Crown, Gift, Lock, DollarSign } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import type { CoinPack } from '@/types';
 
 const PaymentModal = dynamic(() => import('@/components/coins/PaymentModal'), { ssr: false });
 
-// Stored sweeps_coins are in cents of Sharpr Cash (÷100 = dollars)
-// 1 Sharpr Cash = $1.00 redeemable
+// sweeps_coins stored as cents of Sharpr Cash (÷100 = dollar value)
 const COIN_PACKS: CoinPack[] = [
   { id: 'starter', label: 'Starter', price_cents: 500,  gold_coins: 500,  sweeps_coins: 400  },
   { id: 'player',  label: 'Player',  price_cents: 1000, gold_coins: 1100, sweeps_coins: 800,  popular: true },
@@ -17,20 +16,22 @@ const COIN_PACKS: CoinPack[] = [
   { id: 'elite',   label: 'Elite',   price_cents: 5000, gold_coins: 6500, sweeps_coins: 4500 },
 ];
 
-const PACK_ICONS = [Coins, Zap, Star, Crown];
+const PACK_ICONS = [DollarSign, Zap, Star, Crown];
 
-// Custom: 100 Sharpr Coins = $1.00, 80% back as Sharpr Cash
-function customPrice(coins: number) { return (coins / 100).toFixed(2); }
-function customCash(coins: number) { return (Math.floor(coins * 0.8) / 100).toFixed(2); }
+// Custom: enter cash amount → derive coins & price (80% ratio)
+function cashToPrice(cash: number) { return cash / 0.8; }
+function cashToCoins(cash: number) { return Math.round(cashToPrice(cash) * 100); }
+function cashToSweepsStored(cash: number) { return Math.round(cash * 100); }
 
 export default function CoinsPage() {
   const [modal, setModal] = useState<{ packId: string; customGold?: number } | null>(null);
   const [success, setSuccess] = useState<{ gold: number; sweeps: number } | null>(null);
-  const [customCoins, setCustomCoins] = useState('');
+  const [customCash, setCustomCash] = useState('');
   const [dailyClaimable, setDailyClaimable] = useState(false);
   const [dailyClaiming, setDailyClaiming] = useState(false);
   const [dailyClaimed, setDailyClaimed] = useState(false);
   const [restricted, setRestricted] = useState(false);
+  const policyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/api/coins/daily-bonus').then(r => r.json()).then(d => setDailyClaimable(d.claimable));
@@ -63,23 +64,21 @@ export default function CoinsPage() {
     }
   };
 
-  const customCoinsNum = parseInt(customCoins) || 0;
-  const customValid = customCoinsNum >= 100 && customCoinsNum <= 100000;
+  const customCashNum = parseFloat(customCash) || 0;
+  const customValid = customCashNum >= 1 && customCashNum <= 800;
+  const customCoinsNeeded = cashToCoins(customCashNum);
+  const customPriceNum = cashToPrice(customCashNum);
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-black text-white">Get Coins</h1>
+        <h1 className="text-3xl font-black text-white">Get Sharpr Cash</h1>
         <p className="text-gray-400">
           {restricted
             ? 'Your state does not allow cash prizes. Play free with Sharpr Coins.'
-            : 'Purchase Sharpr Coins and receive Sharpr Cash to enter contests and win real prizes.'}
+            : 'Choose how much Sharpr Cash you want. Redeemable at $1.00 each.'}
         </p>
-        <div className="flex items-center justify-center gap-6 pt-1 text-sm flex-wrap">
-          <span><span className="text-yellow-400 font-bold">🪙 Sharpr Coins</span> — for entertainment only, no cash value</span>
-          {!restricted && <span><span className="text-green-400 font-bold">💵 Sharpr Cash</span> — redeemable for cash at $1.00 each</span>}
-        </div>
       </div>
 
       {/* Purchase success banner */}
@@ -88,10 +87,10 @@ export default function CoinsPage() {
           <div>
             <div className="font-bold text-green-400">Payment successful!</div>
             <div className="text-sm text-gray-300 mt-0.5">
-              <span className="text-yellow-400 font-semibold">{success.gold.toLocaleString()} Sharpr Coins</span>
-              {' + '}
               <span className="text-green-400 font-semibold">${(success.sweeps / 100).toFixed(2)} Sharpr Cash</span>
-              {' have been added to your account.'}
+              {' + '}
+              <span className="text-yellow-400 font-semibold">{success.gold.toLocaleString()} Sharpr Coins</span>
+              {' added to your account.'}
             </div>
           </div>
           <button onClick={() => setSuccess(null)} className="text-gray-500 hover:text-white text-xl leading-none">×</button>
@@ -134,7 +133,7 @@ export default function CoinsPage() {
         </CardBody>
       </Card>
 
-      {/* Restricted state: free play only message */}
+      {/* Restricted state */}
       {restricted && (
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5 text-center space-y-2">
           <Lock size={24} className="text-gray-500 mx-auto" />
@@ -146,12 +145,12 @@ export default function CoinsPage() {
         </div>
       )}
 
-      {/* Packs grid — hidden for restricted states */}
+      {/* Packs + custom — hidden for restricted states */}
       {!restricted && (
         <>
+          {/* Packs grid */}
           <div>
-            <h2 className="text-lg font-bold text-white mb-1">Coin Packs</h2>
-            <p className="text-sm text-gray-500 mb-4">Purchase Sharpr Coins and receive Sharpr Cash FREE as a promotional bonus.</p>
+            <h2 className="text-lg font-bold text-white mb-4">Sharpr Cash Packages</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {COIN_PACKS.map((pack, i) => {
                 const Icon = PACK_ICONS[i];
@@ -166,27 +165,26 @@ export default function CoinsPage() {
                       </div>
                     )}
                     <Card className={pack.popular ? 'border-green-500/50' : ''}>
-                      <CardBody className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Icon size={20} className="text-yellow-400" />
-                            <span className="font-bold text-white text-lg">{pack.label}</span>
+                      <CardBody className="space-y-3">
+                        {/* Cash amount — hero */}
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="text-3xl font-black text-green-400">${cashValue}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">Sharpr Cash</div>
                           </div>
-                          <span className="text-2xl font-black text-white">${(pack.price_cents / 100).toFixed(2)}</span>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-400">Sharpr Coins</span>
-                            <span className="font-bold text-yellow-400">{pack.gold_coins.toLocaleString()} coins</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-400">Sharpr Cash <span className="text-xs text-gray-600">(FREE bonus)</span></span>
-                            <span className="font-bold text-green-400">${cashValue}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-gray-500 pt-1 border-t border-gray-800">
-                            <span>1 Sharpr Cash = $1.00 redeemable</span>
+                          <div className="flex items-center gap-1.5 text-gray-400">
+                            <Icon size={16} />
+                            <span className="text-sm font-bold">{pack.label}</span>
                           </div>
                         </div>
+
+                        {/* Coins required */}
+                        <div className="bg-gray-800/60 rounded-lg px-3 py-2 text-sm text-gray-400">
+                          Requires purchase of{' '}
+                          <span className="text-yellow-400 font-semibold">{pack.gold_coins.toLocaleString()} Sharpr Coins</span>
+                        </div>
+
+                        {/* Price + buy */}
                         <button
                           onClick={() => openModal(pack.id)}
                           className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${
@@ -195,7 +193,7 @@ export default function CoinsPage() {
                               : 'bg-gray-700 hover:bg-gray-600 text-white'
                           }`}
                         >
-                          Buy {pack.label}
+                          Buy for ${(pack.price_cents / 100).toFixed(2)}
                         </button>
                       </CardBody>
                     </Card>
@@ -210,51 +208,67 @@ export default function CoinsPage() {
             <CardBody className="space-y-4">
               <div>
                 <h3 className="font-bold text-white">Custom Amount</h3>
-                <p className="text-sm text-gray-400 mt-0.5">Choose exactly how many Sharpr Coins you want. 100 coins = $1.00. Receive 80% back as Sharpr Cash FREE.</p>
+                <p className="text-sm text-gray-400 mt-0.5">Enter how much Sharpr Cash you want.</p>
               </div>
-              <div className="flex gap-3 items-end">
-                <div className="flex-1 space-y-1">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Sharpr Coins</label>
-                  <input
-                    type="number"
-                    min="100"
-                    max="100000"
-                    step="100"
-                    placeholder="e.g. 1000"
-                    value={customCoins}
-                    onChange={e => setCustomCoins(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 text-white rounded-lg focus:outline-none focus:border-yellow-500 text-sm"
-                  />
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide">Sharpr Cash amount</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-400 font-bold text-lg">$</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="800"
+                      step="1"
+                      placeholder="20.00"
+                      value={customCash}
+                      onChange={e => setCustomCash(e.target.value)}
+                      className="flex-1 px-3 py-2.5 bg-gray-800 border border-gray-700 text-white rounded-lg focus:outline-none focus:border-green-500 text-sm"
+                    />
+                  </div>
                 </div>
-                {customCoinsNum >= 100 && (
-                  <div className="space-y-1 text-right flex-shrink-0">
-                    <div className="text-xs text-gray-500">You get</div>
-                    <div className="text-sm font-bold text-yellow-400">{customCoinsNum.toLocaleString()} coins</div>
-                    <div className="text-sm font-bold text-green-400">+ ${customCash(customCoinsNum)} cash</div>
-                    <div className="text-xs text-gray-500">${customPrice(customCoinsNum)}</div>
+
+                {customCashNum >= 1 && (
+                  <div className="bg-gray-800/60 rounded-lg px-3 py-2 text-sm text-gray-400">
+                    Requires purchase of{' '}
+                    <span className="text-yellow-400 font-semibold">{customCoinsNeeded.toLocaleString()} Sharpr Coins</span>
+                    {' '}• Price: <span className="text-white font-semibold">${customPriceNum.toFixed(2)}</span>
                   </div>
                 )}
+
+                <button
+                  onClick={() => openModal('custom', customCoinsNeeded)}
+                  disabled={!customValid}
+                  className="w-full py-2.5 rounded-lg font-bold text-sm bg-green-500 hover:bg-green-400 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {customValid
+                    ? `Get $${parseFloat(customCash).toFixed(2)} Sharpr Cash for $${customPriceNum.toFixed(2)}`
+                    : 'Enter an amount ($1.00 – $800.00)'}
+                </button>
               </div>
-              <button
-                onClick={() => openModal('custom', customCoinsNum)}
-                disabled={!customValid}
-                className="w-full py-2.5 rounded-lg font-bold text-sm bg-yellow-500 hover:bg-yellow-400 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {customValid
-                  ? `Buy ${customCoinsNum.toLocaleString()} Sharpr Coins for $${customPrice(customCoinsNum)}`
-                  : 'Enter an amount (min 100 coins)'}
-              </button>
+
+              {/* Policy note */}
+              <div className="text-xs text-gray-600 pt-1 border-t border-gray-800">
+                <button
+                  onClick={() => policyRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  className="underline hover:text-gray-400"
+                >
+                  *Sharpr Cash bonus policy
+                </button>
+              </div>
             </CardBody>
           </Card>
+
+          {/* Policy fine print */}
+          <div ref={policyRef} className="text-xs text-gray-600 leading-relaxed space-y-1 pt-2">
+            <p>
+              *To receive Sharpr Cash, you must purchase Sharpr Coins ($0.01 per coin). Sharpr Cash is a promotional bonus awarded at no charge — it is not purchased directly. Sharpr Coins have no cash value. Sharpr Cash is redeemable for cash prizes at $1.00 per Sharpr Cash, subject to a $50.00 minimum redemption and 1× playthrough requirement. See{' '}
+              <a href="/sweepstakes-rules" className="underline hover:text-gray-400">Official Rules</a> for full details and eligibility.
+            </p>
+            <p>Must be 18+. Void where prohibited. No purchase necessary — free Sharpr Cash available via <a href="/sweepstakes-rules" className="underline hover:text-gray-400">alternate method of entry</a>.</p>
+          </div>
         </>
       )}
-
-      <p className="text-xs text-gray-600 text-center leading-relaxed">
-        Sharpr Coins are for entertainment only and have no cash value. Sharpr Cash is redeemable for prizes at $1.00 each per{' '}
-        <a href="/sweepstakes-rules" className="underline hover:text-gray-400">Official Rules</a>.
-        Must be 18+. Void where prohibited. No purchase necessary — free Sharpr Cash available via{' '}
-        <a href="/sweepstakes-rules" className="underline hover:text-gray-400">alternate method of entry</a>.
-      </p>
 
       {modal && (
         <PaymentModal

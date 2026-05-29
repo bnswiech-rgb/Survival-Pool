@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Coins, Zap, Star, Crown, Info, Gift } from 'lucide-react';
+import { Coins, Zap, Star, Crown, Gift } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import type { CoinPack } from '@/types';
 
@@ -110,14 +110,6 @@ export default function CoinsPage() {
         </CardBody>
       </Card>
 
-      {/* Sweepstakes info */}
-      <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3">
-        <Info size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
-        <p className="text-sm text-blue-300">
-          <span className="font-bold text-blue-200">No purchase necessary.</span> You can request free Sweeps Coins by mail. See <a href="/sweepstakes-rules" className="underline hover:text-white">Official Rules</a> for details. Void where prohibited.
-        </p>
-      </div>
-
       {/* Packs grid */}
       <div>
         <h2 className="text-lg font-bold text-white mb-4">Coin Packs</h2>
@@ -215,9 +207,9 @@ export default function CoinsPage() {
         </CardBody>
       </Card>
 
-      <p className="text-xs text-gray-600 text-center">
-        Gold Coins have no cash value. Sweeps Coins can be redeemed for prizes per Official Rules.
-        Must be 18+. Not available in FL, ID, MT, WA, or where prohibited by law.
+      <p className="text-xs text-gray-600 text-center leading-relaxed">
+        Gold Coins have no cash value. Sweeps Coins can be redeemed for prizes per <a href="/sweepstakes-rules" className="underline hover:text-gray-400">Official Rules</a>.
+        Must be 18+. Void where prohibited. No purchase necessary — free Sweeps Coins available via <a href="/sweepstakes-rules" className="underline hover:text-gray-400">alternate method of entry</a>.
       </p>
     </div>
   );

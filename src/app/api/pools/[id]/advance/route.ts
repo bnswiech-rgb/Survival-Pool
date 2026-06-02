@@ -188,12 +188,34 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .from('pool_participants')
     .select('*')
     .eq('pool_id', id)
-    .in('status', ['active', 'advanced']);
+    .in('status', ['active', 'advanced', 'winner']);
 
   const winners = (remaining ?? []).filter((p: any) => p.status === 'winner');
   const alive = (remaining ?? []).filter((p: any) => p.status === 'active' || p.status === 'advanced');
 
-  if (alive.length <= 1 || winners.length > 0) {
+  // For team_battle: contest ends when only one team has surviving members
+  let teamBattleOver = false;
+  if (pool.contest_format === 'team_battle') {
+    const aliveTeamIds = new Set(alive.map((p: any) => p.team_id).filter(Boolean));
+    teamBattleOver = aliveTeamIds.size <= 1;
+    if (teamBattleOver && aliveTeamIds.size === 1) {
+      const winningTeamId = [...aliveTeamIds][0];
+      // Mark all surviving members of the winning team as winner
+      for (const p of alive) {
+        if (p.team_id === winningTeamId) {
+          await supabase.from('pool_participants').update({ status: 'winner' }).eq('id', p.id);
+          await supabase.from('activity_feed').insert({
+            pool_id: id,
+            user_id: p.user_id,
+            activity_type: 'won_contest',
+            metadata: { pool_name: pool.name },
+          });
+        }
+      }
+    }
+  }
+
+  if (alive.length <= 1 || winners.length > 0 || teamBattleOver) {
     await supabase.from('pools').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', id);
 
     // Distribute sweeps coin prize pool to winner(s) if coins entry fee was set
@@ -205,7 +227,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const gross = (totalParticipants ?? 0) * pool.entry_fee_coins;
       const rake = Math.round(gross * ((pool.rake_percentage ?? 10) / 100));
       const prize = gross - rake;
-      const winnerParticipants = [...(remaining ?? [])].filter((p: any) => p.status === 'winner');
+      // Re-fetch winners to include any just-marked team_battle winners
+      const { data: freshWinners } = await supabase.from('pool_participants').select('user_id').eq('pool_id', id).eq('status', 'winner');
+      const winnerParticipants = freshWinners ?? [];
       const numWinners = Math.max(1, winnerParticipants.length);
       const prizeEach = Math.floor(prize / numWinners);
       if (prizeEach > 0) {

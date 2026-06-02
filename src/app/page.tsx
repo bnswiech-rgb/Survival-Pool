@@ -29,10 +29,10 @@ export default async function Home() {
   }
 
   // Real stats
-  const [{ count: liveContests }, { data: activePools }, { count: activeSurvivors }] = await Promise.all([
+  const [{ count: liveContests }, { data: activePools }, { count: totalMembers }] = await Promise.all([
     supabase.from('pools').select('*', { count: 'exact', head: true }).in('status', ['active', 'open']),
     supabase.from('pools').select('entry_fee_cents, entry_fee_coins, pool_type').in('status', ['active', 'open']),
-    supabase.from('pool_participants').select('*', { count: 'exact', head: true }).in('status', ['active', 'advanced']),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
   ]);
 
   // Sum prize pools: cash pools use entry_fee_cents (÷100 = dollars), coin pools use entry_fee_coins
@@ -91,8 +91,8 @@ export default async function Home() {
             <div className="text-gray-400 text-sm mt-1">Active Prize Pools</div>
           </div>
           <div>
-            <div className="text-3xl font-black text-purple-400">{(activeSurvivors ?? 0).toLocaleString()}</div>
-            <div className="text-gray-400 text-sm mt-1">Active Survivors</div>
+            <div className="text-3xl font-black text-purple-400">{(totalMembers ?? 0).toLocaleString()}</div>
+            <div className="text-gray-400 text-sm mt-1">Members</div>
           </div>
         </div>
       </section>

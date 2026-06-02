@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { CountdownTimer } from './CountdownTimer';
 import { PoolChat } from '@/components/chat/PoolChat';
@@ -938,10 +939,12 @@ export function PoolDetailClient({
                               const hasLocked = submittedIds.includes(m.user_id);
                               return (
                                 <div key={m.id} className="flex items-center gap-2">
-                                  <Avatar src={m.profiles?.avatar_url} username={m.profiles?.username ?? '?'} size="xs" />
-                                  <span className={`text-sm ${isElim ? 'text-gray-500' : 'text-gray-300'}`}>
+                                  <Link href={`/profile/${m.profiles?.username}`} className="flex-shrink-0">
+                                    <Avatar src={m.profiles?.avatar_url} username={m.profiles?.username ?? '?'} size="xs" />
+                                  </Link>
+                                  <Link href={`/profile/${m.profiles?.username}`} className={`text-sm hover:underline ${isElim ? 'text-gray-500' : 'text-gray-300'}`}>
                                     {m.profiles?.username ?? 'Unknown'}
-                                  </span>
+                                  </Link>
                                   {pick ? (
                                     <span className="text-xs text-gray-500 truncate">
                                       {pickLabel(pick)}
@@ -972,8 +975,10 @@ export function PoolDetailClient({
                               const hasLocked = submittedIds.includes(p.user_id);
                               return (
                                 <div key={p.id} className="flex items-center gap-2">
-                                  <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="xs" />
-                                  <span className="text-sm text-gray-500">{p.profiles?.username ?? 'Unknown'}</span>
+                                  <Link href={`/profile/${p.profiles?.username}`} className="flex-shrink-0">
+                                    <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="xs" />
+                                  </Link>
+                                  <Link href={`/profile/${p.profiles?.username}`} className="text-sm text-gray-500 hover:underline">{p.profiles?.username ?? 'Unknown'}</Link>
                                   {hasLocked ? <span className="text-xs text-green-400 font-medium">✓ locked in</span> : <span className="text-xs text-gray-600">no pick</span>}
                                 </div>
                               );
@@ -1008,12 +1013,14 @@ export function PoolDetailClient({
                           <div className="text-gray-500 font-bold text-sm w-6 text-center flex-shrink-0">
                             {p.status === 'winner' ? '🏆' : isElim ? '💀' : `#${idx + 1}`}
                           </div>
-                          <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="sm" />
+                          <Link href={`/profile/${p.profiles?.username}`} className="flex-shrink-0">
+                            <Avatar src={p.profiles?.avatar_url} username={p.profiles?.username ?? '?'} size="sm" />
+                          </Link>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`font-bold text-sm ${isElim ? 'text-gray-500' : 'text-white'}`}>
+                              <Link href={`/profile/${p.profiles?.username}`} className={`font-bold text-sm hover:underline ${isElim ? 'text-gray-500' : 'text-white'}`}>
                                 {p.profiles?.username ?? 'Unknown'}
-                              </span>
+                              </Link>
                               {isStreakRace ? (
                                 (() => {
                                   const s = projectStreak(p);

@@ -92,7 +92,7 @@ export default async function Home() {
           </div>
           <div>
             <div className="text-3xl font-black text-purple-400">{(totalMembers ?? 0).toLocaleString()}</div>
-            <div className="text-gray-400 text-sm mt-1">Members</div>
+            <div className="text-gray-400 text-sm mt-1">Players</div>
           </div>
         </div>
       </section>

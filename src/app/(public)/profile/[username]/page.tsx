@@ -36,12 +36,13 @@ export default async function ProfilePage({ params }: Props) {
   );
   const { data: allParticipations } = await serviceClient
     .from('pool_participants')
-    .select('wins, losses, pushes, status')
+    .select('wins, losses, pushes, status, pools(team_size)')
     .eq('user_id', profile.id);
 
-  const realWins = (allParticipations ?? []).reduce((s: number, p: any) => s + (p.wins ?? 0), 0);
-  const realLosses = (allParticipations ?? []).reduce((s: number, p: any) => s + (p.losses ?? 0), 0);
-  const realPushes = (allParticipations ?? []).reduce((s: number, p: any) => s + (p.pushes ?? 0), 0);
+  const soloParticipations = (allParticipations ?? []).filter((p: any) => !p.pools?.team_size);
+  const realWins = soloParticipations.reduce((s: number, p: any) => s + (p.wins ?? 0), 0);
+  const realLosses = soloParticipations.reduce((s: number, p: any) => s + (p.losses ?? 0), 0);
+  const realPushes = soloParticipations.reduce((s: number, p: any) => s + (p.pushes ?? 0), 0);
   const realPoolsEntered = (allParticipations ?? []).length;
   const realPoolsWon = (allParticipations ?? []).filter((p: any) => p.status === 'winner').length;
 

@@ -1,0 +1,38 @@
+import { createClient } from '@/lib/supabase/server';
+import { Navbar } from '@/components/nav/Navbar';
+
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const profile = user
+    ? (await supabase.from('profiles').select('*').eq('id', user.id).single()).data
+    : null;
+
+  return (
+    <div className="min-h-screen bg-gray-950">
+      <Navbar profile={profile} />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {children}
+      </main>
+      <footer className="border-t border-gray-800 py-6 mt-12">
+        <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
+          <p className="text-gray-500 text-xs">
+            Sharpr is a peer-to-peer sports picking contest platform. No purchase necessary to enter or win. No sportsbook wagering occurs. Must be 18+. Void where prohibited.
+          </p>
+          <div className="flex items-center justify-center gap-4 text-xs flex-wrap">
+            <a href="/terms" className="text-gray-600 hover:text-gray-400 transition-colors">Terms of Service</a>
+            <span className="text-gray-700">·</span>
+            <a href="/privacy" className="text-gray-600 hover:text-gray-400 transition-colors">Privacy Policy</a>
+            <span className="text-gray-700">·</span>
+            <a href="/sweepstakes-rules" className="text-gray-600 hover:text-gray-400 transition-colors">Sweepstakes Rules</a>
+            <span className="text-gray-700">·</span>
+            <a href="/rules" className="text-gray-600 hover:text-gray-400 transition-colors">Contest Rules</a>
+            <span className="text-gray-700">·</span>
+            <a href="/responsible-gaming" className="text-gray-600 hover:text-gray-400 transition-colors">Responsible Gaming</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

@@ -183,6 +183,7 @@ export interface ActivityItem {
   metadata: Record<string, any>;
   created_at: string;
   profile?: Profile;
+  pools?: { name: string; status: string } | null;
 }
 
 export interface Team {

@@ -132,6 +132,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     currentRound.round_number
   );
 
+  // Count survivors after this round for activity metadata
+  const survivorsCount = [...updates.values()].filter(u => u.status === 'active' || u.status === 'advanced').length;
+
   // Apply updates
   for (const [participantId, update] of updates) {
     const participant = participants.find((p: any) => p.id === participantId);
@@ -169,7 +172,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         pool_id: id,
         user_id: participant.user_id,
         activity_type: 'survived_round',
-        metadata: { round: currentRound.round_number },
+        metadata: { round: currentRound.round_number, remaining: survivorsCount },
       });
     }
   }

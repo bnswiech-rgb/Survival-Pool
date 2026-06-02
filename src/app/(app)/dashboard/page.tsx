@@ -7,7 +7,6 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatCents, getContestFormatLabel, formatPickLabel } from '@/lib/utils';
 import { ActivityFeed } from '@/components/activity/ActivityFeed';
-import { DailyClaimCard } from '@/components/coins/DailyClaimCard';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -23,11 +22,19 @@ export default async function DashboardPage() {
       .limit(20),
     supabase
       .from('activity_feed')
-      .select('*, profiles(username, avatar_url)')
+      .select('*, profiles(username, avatar_url), pools(name, status)')
       .eq('user_id', user!.id)
       .order('created_at', { ascending: false })
-      .limit(10),
+      .limit(50),
   ]);
+
+  // Filter activity: keep items from active pools, or anything less than 24 hours old
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const filteredActivity = (activity ?? []).filter((item: any) => {
+    const isRecent = new Date(item.created_at).getTime() > cutoff;
+    const poolActive = item.pools?.status && item.pools.status !== 'completed';
+    return isRecent || poolActive;
+  }).slice(0, 10);
 
   // For each active pool, get the current open round and the user's pick for it
   const poolIds = (myParticipations ?? []).map((p: any) => p.pool_id);
@@ -56,14 +63,20 @@ export default async function DashboardPage() {
     if (!pickByPool[pk.pool_id]) pickByPool[pk.pool_id] = pk;
   }
 
-  const activeParticipations = (myParticipations ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status) && p.pools?.status !== 'completed');
-  const finishedParticipations = (myParticipations ?? []).filter((p: any) => ['eliminated', 'winner'].includes(p.status) || p.pools?.status === 'completed');
+  const activeParticipations = (myParticipations ?? []).filter((p: any) => ['active', 'advanced'].includes(p.status) && p.pools && !['completed', 'cancelled'].includes(p.pools?.status));
+  const finishedParticipations = (myParticipations ?? []).filter((p: any) => p.pools && (['eliminated', 'winner'].includes(p.status) || ['completed', 'cancelled'].includes(p.pools?.status)));
+
+  // Compute stats from pool_participants (profile columns are stale denormalized values)
+  const soloParticipations = (myParticipations ?? []).filter((p: any) => !p.pools?.team_size);
+  const totalWins = soloParticipations.reduce((s: number, p: any) => s + (p.wins ?? 0), 0);
+  const contestsEntered = (myParticipations ?? []).length;
+  const contestsWon = (myParticipations ?? []).filter((p: any) => p.status === 'winner').length;
 
   const stats = [
     { label: 'Active Contests', value: activeParticipations.length, icon: Target, color: 'text-blue-400' },
-    { label: 'Total Wins', value: profile?.wins ?? 0, icon: TrendingUp, color: 'text-green-400' },
-    { label: 'Contests Entered', value: profile?.pools_entered ?? 0, icon: Trophy, color: 'text-yellow-400' },
-    { label: 'Contests Won', value: profile?.pools_won ?? 0, icon: Award, color: 'text-purple-400' },
+    { label: 'Total Wins', value: totalWins, icon: TrendingUp, color: 'text-green-400' },
+    { label: 'Contests Entered', value: contestsEntered, icon: Trophy, color: 'text-yellow-400' },
+    { label: 'Contests Won', value: contestsWon, icon: Award, color: 'text-purple-400' },
   ];
 
   return (
@@ -233,7 +246,7 @@ export default async function DashboardPage() {
         {/* Activity Feed */}
         <div>
           <h2 className="text-xl font-bold text-white mb-4">Recent Activity</h2>
-          <ActivityFeed items={(activity as any) || []} />
+          <ActivityFeed items={filteredActivity} />
         </div>
       </div>
     </div>

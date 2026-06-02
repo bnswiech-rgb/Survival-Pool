@@ -36,7 +36,7 @@ export function Navbar({ profile }: NavbarProps) {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
-            {profile && (
+            {profile ? (
               <>
                 <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
                   Dashboard
@@ -47,7 +47,14 @@ export function Navbar({ profile }: NavbarProps) {
                 <Link href="/pools/create" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
                   Create Contest
                 </Link>
+                <Link href="/leaderboard" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                  Leaderboard
+                </Link>
               </>
+            ) : (
+              <Link href="/leaderboard" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                Leaderboard
+              </Link>
             )}
           </div>
 
@@ -143,6 +150,9 @@ export function Navbar({ profile }: NavbarProps) {
                 </Link>
                 <Link href="/pools/create" className="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors" onClick={() => setMobileOpen(false)}>
                   Create Contest
+                </Link>
+                <Link href="/leaderboard" className="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors" onClick={() => setMobileOpen(false)}>
+                  Leaderboard
                 </Link>
                 <Link href={`/profile/${profile.username}`} className="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors" onClick={() => setMobileOpen(false)}>
                   Profile

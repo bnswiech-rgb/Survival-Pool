@@ -28,6 +28,19 @@ export default async function Home() {
     profile = data;
   }
 
+  // Real stats
+  const [{ count: liveContests }, { data: activePools }, { count: activeSurvivors }] = await Promise.all([
+    supabase.from('pools').select('*', { count: 'exact', head: true }).in('status', ['active', 'open']),
+    supabase.from('pools').select('entry_fee_cents, entry_fee_coins, pool_type').in('status', ['active', 'open']),
+    supabase.from('pool_participants').select('*', { count: 'exact', head: true }).in('status', ['active', 'advanced']),
+  ]);
+
+  // Sum prize pools: cash pools use entry_fee_cents (÷100 = dollars), coin pools use entry_fee_coins
+  const totalPrizeDollars = (activePools ?? []).reduce((sum: number, p: any) => {
+    if (p.pool_type === 'cash') return sum + (p.entry_fee_cents ?? 0) / 100;
+    return sum + (p.entry_fee_coins ?? 0) / 100;
+  }, 0);
+
   return (
     <div className="min-h-screen bg-gray-950">
       <AuthHashHandler />
@@ -70,15 +83,15 @@ export default async function Home() {
       <section className="border-y border-gray-800 bg-gray-900/50">
         <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-3 gap-8 text-center">
           <div>
-            <div className="text-3xl font-black text-green-400">24</div>
+            <div className="text-3xl font-black text-green-400">{liveContests ?? 0}</div>
             <div className="text-gray-400 text-sm mt-1">Live Contests</div>
           </div>
           <div>
-            <div className="text-3xl font-black text-white">$48,200</div>
-            <div className="text-gray-400 text-sm mt-1">Prize Pool</div>
+            <div className="text-3xl font-black text-white">${totalPrizeDollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+            <div className="text-gray-400 text-sm mt-1">Active Prize Pools</div>
           </div>
           <div>
-            <div className="text-3xl font-black text-purple-400">1,847</div>
+            <div className="text-3xl font-black text-purple-400">{(activeSurvivors ?? 0).toLocaleString()}</div>
             <div className="text-gray-400 text-sm mt-1">Active Survivors</div>
           </div>
         </div>

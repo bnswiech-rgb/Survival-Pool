@@ -235,6 +235,10 @@ export function processRoundResults(
       case 'team_battle':
         update = processTeamBattleResult(participant, pickStatus, pool.push_rule, roundNumber);
         break;
+      case 'survivor_no_repeat':
+        // Same elimination logic as classic — lose once, you're out. Team reuse is enforced at pick submission.
+        update = processClassicSurvivalResult(participant, pickStatus, pool.push_rule, roundNumber);
+        break;
       default:
         update = processClassicSurvivalResult(participant, pickStatus, pool.push_rule, roundNumber);
     }

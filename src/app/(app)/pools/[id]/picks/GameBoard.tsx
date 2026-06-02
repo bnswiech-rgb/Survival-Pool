@@ -46,6 +46,8 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
   const [selectedPick, setSelectedPick] = useState<GamePick | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<'all' | 'spread' | 'total' | 'moneyline'>('all');
+  const [usedTeams, setUsedTeams] = useState<string[]>([]);
+  const isSurvivorNoRepeat = pool.contest_format === 'survivor_no_repeat';
   // Normalize sport — "All Sports" means no lock, show all with tabs
   const normalizedSport = pool.sport === 'All Sports' ? 'All' : pool.sport;
   const lockedSport = (normalizedSport !== 'All' && SPORTS.includes(normalizedSport as any)) ? normalizedSport : null;
@@ -55,6 +57,17 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
     fetchGames();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sportFilter]);
+
+  useEffect(() => {
+    if (!isSurvivorNoRepeat) return;
+    fetch(`/api/pools/${pool.id}/picks`)
+      .then(r => r.json())
+      .then(d => {
+        const sides = (d.picks ?? []).map((p: any) => p.side.toLowerCase().trim());
+        setUsedTeams(sides);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool.id, isSurvivorNoRepeat]);
 
   async function fetchGames() {
     setLoading(true);
@@ -241,6 +254,22 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
         </div>
       )}
 
+      {/* Survivor no-repeat: used teams banner */}
+      {isSurvivorNoRepeat && usedTeams.length > 0 && (
+        <div className={inline ? 'px-2 py-2' : 'max-w-4xl mx-auto px-4 pt-3'}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-3">
+            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">Teams Already Used</p>
+            <div className="flex flex-wrap gap-1.5">
+              {usedTeams.map(team => (
+                <span key={team} className="px-2 py-1 bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-lg line-through">
+                  {team}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Game list */}
       <div className={inline ? 'py-2' : 'max-w-4xl mx-auto px-4 py-4 pb-24'}>
         {loading ? (
@@ -285,6 +314,9 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
                   const showTotals = filter === 'all' || filter === 'total';
                   const showMLs = filter === 'all' || filter === 'moneyline';
 
+                  const isTeamUsed = (team: string) =>
+                    isSurvivorNoRepeat && usedTeams.includes(team.toLowerCase().trim());
+
                   return (
                     <div
                       key={game.id}
@@ -321,17 +353,21 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
                             <div className="grid grid-cols-2 gap-1.5">
                               {spreads.map((pick, i) => {
                                 const isPickSelected = selectedPick === pick && selectedGame?.id === game.id;
+                                const burned = isTeamUsed(pick.team);
                                 return (
                                   <button
                                     key={i}
+                                    disabled={burned}
                                     onClick={() => {
                                       setSelectedGame(game);
                                       setSelectedPick(isPickSelected ? null : pick);
                                     }}
                                     className={`flex items-center justify-center px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
-                                      isPickSelected
-                                        ? 'bg-green-500 border-green-500 text-black'
-                                        : 'bg-gray-800/60 border-gray-700 text-white hover:bg-gray-700 hover:border-gray-600'
+                                      burned
+                                        ? 'bg-gray-800/30 border-gray-800 text-gray-600 cursor-not-allowed line-through'
+                                        : isPickSelected
+                                          ? 'bg-green-500 border-green-500 text-black'
+                                          : 'bg-gray-800/60 border-gray-700 text-white hover:bg-gray-700 hover:border-gray-600'
                                     }`}
                                   >
                                     <span className="truncate">{pick.label}</span>
@@ -377,17 +413,21 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
                             <div className="grid grid-cols-2 gap-1.5">
                               {mls.map((pick, i) => {
                                 const isPickSelected = selectedPick === pick && selectedGame?.id === game.id;
+                                const burned = isTeamUsed(pick.team);
                                 return (
                                   <button
                                     key={i}
+                                    disabled={burned}
                                     onClick={() => {
                                       setSelectedGame(game);
                                       setSelectedPick(isPickSelected ? null : pick);
                                     }}
                                     className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
-                                      isPickSelected
-                                        ? 'bg-green-500 border-green-500 text-black'
-                                        : 'bg-gray-800/60 border-gray-700 text-white hover:bg-gray-700 hover:border-gray-600'
+                                      burned
+                                        ? 'bg-gray-800/30 border-gray-800 text-gray-600 cursor-not-allowed line-through'
+                                        : isPickSelected
+                                          ? 'bg-green-500 border-green-500 text-black'
+                                          : 'bg-gray-800/60 border-gray-700 text-white hover:bg-gray-700 hover:border-gray-600'
                                     }`}
                                   >
                                     <span className="truncate">{pick.label}</span>

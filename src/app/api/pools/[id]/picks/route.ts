@@ -115,6 +115,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
+  // For survivor_no_repeat: block reusing a team already picked in this pool
+  if (pool?.contest_format === 'survivor_no_repeat') {
+    const { data: priorPicks } = await supabase
+      .from('picks')
+      .select('side')
+      .eq('pool_id', id)
+      .eq('user_id', user.id)
+      .neq('status', 'void');
+
+    const usedTeams = (priorPicks ?? []).map((p: any) => p.side.toLowerCase().trim());
+    const incomingSide = side.toLowerCase().trim();
+    if (usedTeams.includes(incomingSide)) {
+      return NextResponse.json(
+        { error: `You already used ${side} in this contest. Each team can only be picked once.` },
+        { status: 400 }
+      );
+    }
+  }
+
   // For team_battle: block conflicting picks within the same team
   if (pool?.contest_format === 'team_battle' && participant.team_id) {
     const { data: teammates } = await supabase

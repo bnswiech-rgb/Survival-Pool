@@ -68,6 +68,7 @@ export function getContestFormatLabel(format: string): string {
     best_record: 'Best Record',
     streak_race: 'Streak Race',
     team_battle: 'Team Battle',
+    survivor_no_repeat: 'Survivor Pool',
   };
   return labels[format] || format;
 }

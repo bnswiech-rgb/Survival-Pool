@@ -18,6 +18,7 @@ const FORMATS: { value: ContestFormat; label: string; desc: string }[] = [
   { value: 'first_to_x', label: 'First To X Wins', desc: 'Race to reach the target win count.' },
   { value: 'best_record', label: 'Best Record', desc: 'Most wins after N rounds wins.' },
   { value: 'streak_race', label: 'Streak Race', desc: 'Build the longest consecutive win streak.' },
+  { value: 'survivor_no_repeat', label: 'Survivor Pool', desc: 'Pick one team per week on the ML. Can\'t reuse a team. Lose once, you\'re out.' },
 ];
 
 const TOTAL_STEPS = 6;

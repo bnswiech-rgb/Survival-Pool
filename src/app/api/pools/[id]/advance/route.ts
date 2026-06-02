@@ -177,6 +177,37 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
+  // For team_battle: if any team member was eliminated this round, eliminate the whole team
+  if (pool.contest_format === 'team_battle') {
+    // Build map of team_id -> all participant updates
+    const teamUpdates = new Map<string, { participantId: string; userId: string; status: string }[]>();
+    for (const p of participants) {
+      const teamId = (p as any).team_id;
+      if (!teamId) continue;
+      const update = updates.get(p.id);
+      if (!teamUpdates.has(teamId)) teamUpdates.set(teamId, []);
+      teamUpdates.get(teamId)!.push({ participantId: p.id, userId: (p as any).user_id, status: update?.status ?? p.status });
+    }
+
+    for (const [, members] of teamUpdates) {
+      const anyEliminated = members.some(m => m.status === 'eliminated');
+      if (anyEliminated) {
+        // Eliminate everyone on this team
+        for (const m of members) {
+          if (m.status !== 'eliminated') {
+            await supabase.from('pool_participants').update({ status: 'eliminated', eliminated_round: currentRound.round_number }).eq('id', m.participantId);
+            await supabase.from('activity_feed').insert({
+              pool_id: id,
+              user_id: m.userId,
+              activity_type: 'eliminated',
+              metadata: { round: currentRound.round_number },
+            });
+          }
+        }
+      }
+    }
+  }
+
   // Complete current round
   await supabase.from('rounds').update({ status: 'completed' }).eq('id', currentRound.id);
 
@@ -196,10 +227,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // For team_battle: contest ends when only one team has surviving members
   let teamBattleOver = false;
   if (pool.contest_format === 'team_battle') {
-    const aliveTeamIds = new Set(alive.map((p: any) => p.team_id).filter(Boolean));
-    teamBattleOver = aliveTeamIds.size <= 1;
-    if (teamBattleOver && aliveTeamIds.size === 1) {
-      const winningTeamId = [...aliveTeamIds][0];
+    // Count members per alive team — teams with < team_size members are incomplete and don't count
+    const aliveTeamCounts = new Map<string, number>();
+    for (const p of alive) {
+      const tid = (p as any).team_id;
+      if (!tid) continue;
+      aliveTeamCounts.set(tid, (aliveTeamCounts.get(tid) ?? 0) + 1);
+    }
+    const requiredSize = pool.team_size ?? 1;
+    const fullyAliveTeamIds = new Set([...aliveTeamCounts.entries()].filter(([, count]) => count >= requiredSize).map(([tid]) => tid));
+    teamBattleOver = fullyAliveTeamIds.size <= 1;
+    if (teamBattleOver && fullyAliveTeamIds.size === 1) {
+      const winningTeamId = [...fullyAliveTeamIds][0];
       // Mark all surviving members of the winning team as winner
       for (const p of alive) {
         if (p.team_id === winningTeamId) {

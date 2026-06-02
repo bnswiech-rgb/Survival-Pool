@@ -12,11 +12,29 @@ async function getLeaderboardData() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
-  // Most contests won + most coins + most cash — all from profiles
+  // Coins and cash from profiles
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, username, avatar_url, pools_won, gold_coins, sweeps_coins')
+    .select('id, username, avatar_url, gold_coins, sweeps_coins')
     .not('username', 'is', null);
+
+  // Contests won — computed from pool_participants (profiles.pools_won is stale)
+  const { data: winners } = await supabase
+    .from('pool_participants')
+    .select('user_id, profiles(username, avatar_url)')
+    .eq('status', 'winner');
+
+  const winsMap = new Map<string, { username: string; avatar_url: string | null; count: number }>();
+  for (const w of winners ?? []) {
+    const username = (w as any).profiles?.username;
+    if (!username) continue;
+    const existing = winsMap.get(w.user_id);
+    if (existing) existing.count++;
+    else winsMap.set(w.user_id, { username, avatar_url: (w as any).profiles?.avatar_url ?? null, count: 1 });
+  }
+  const topContestsWon = [...winsMap.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 
   // Most consecutive wins — max current_streak per user across active participations
   const { data: streaks } = await supabase
@@ -37,11 +55,6 @@ async function getLeaderboardData() {
   }
   const topStreaks = [...streakMap.values()]
     .sort((a, b) => b.current_streak - a.current_streak)
-    .slice(0, 10);
-
-  const topContestsWon = [...(profiles ?? [])]
-    .filter(p => p.pools_won > 0)
-    .sort((a, b) => b.pools_won - a.pools_won)
     .slice(0, 10);
 
   const topCoins = [...(profiles ?? [])]
@@ -137,7 +150,7 @@ export default async function LeaderboardPage() {
         <LeaderboardCard
           title="Consecutive Wins"
           icon={<Flame size={20} className="text-orange-400" />}
-          valueLabel="streak"
+          valueLabel="wins"
           rows={topStreaks.map(s => ({
             username: (s as any).profiles?.username ?? 'Unknown',
             avatar_url: (s as any).profiles?.avatar_url,
@@ -152,7 +165,7 @@ export default async function LeaderboardPage() {
           rows={topContestsWon.map(p => ({
             username: p.username,
             avatar_url: p.avatar_url,
-            value: p.pools_won.toString(),
+            value: p.count.toString(),
           }))}
         />
 

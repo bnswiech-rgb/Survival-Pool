@@ -47,7 +47,7 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
   const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<'all' | 'spread' | 'total' | 'moneyline'>('all');
   const [usedTeams, setUsedTeams] = useState<string[]>([]);
-  const isSurvivorNoRepeat = pool.contest_format === 'survivor_no_repeat';
+  const isSurvivorNoRepeat = (pool.contest_format as string) === 'survivor_no_repeat';
   // Normalize sport — "All Sports" means no lock, show all with tabs
   const normalizedSport = pool.sport === 'All Sports' ? 'All' : pool.sport;
   const lockedSport = (normalizedSport !== 'All' && SPORTS.includes(normalizedSport as any)) ? normalizedSport : null;
@@ -75,7 +75,8 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
       const deadlineParam = round.deadline ? `&deadline=${encodeURIComponent(round.deadline)}` : '';
       const startParam = pool.start_date ? `&start=${encodeURIComponent(pool.start_date)}` : '';
       const todayOnly = pool.contest_format === 'team_battle' ? '&today_only=true' : '';
-      const res = await fetch(`/api/odds?sport=${encodeURIComponent(sportFilter)}${deadlineParam}${startParam}${todayOnly}`);
+      const noOddsLimit = isSurvivorNoRepeat ? '&no_odds_limit=true' : '';
+      const res = await fetch(`/api/odds?sport=${encodeURIComponent(sportFilter)}${deadlineParam}${startParam}${todayOnly}${noOddsLimit}`);
       const data = await res.json();
       if (data.error) {
         toast.error(data.error);

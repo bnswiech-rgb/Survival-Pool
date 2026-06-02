@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
   const startDate = searchParams.get('start') ?? undefined;
   const deadline = searchParams.get('deadline') ?? undefined;
   const todayOnly = searchParams.get('today_only') === 'true';
+  const noOddsLimit = searchParams.get('no_odds_limit') === 'true';
   let { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(startDate, deadline);
 
   // For team_battle pools: only show games starting today (ET).
@@ -223,7 +224,7 @@ export async function GET(request: NextRequest) {
       if (h2hMarket) {
         for (const outcome of h2hMarket.outcomes) {
           const odds = Math.round(outcome.price);
-          if (odds > 0 || odds >= -150) {
+          if (noOddsLimit || odds > 0 || odds >= -150) {
             picks.push({
               type: 'moneyline',
               team: outcome.name,

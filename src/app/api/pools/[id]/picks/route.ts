@@ -57,11 +57,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  // Validate eligibility
-  if (!isEligiblePick(pick_type, american_odds)) {
-    return NextResponse.json({ error: 'Pick does not meet eligibility requirements' }, { status: 400 });
-  }
-
   // Check round is open
   const { data: round } = await supabase.from('rounds').select('*').eq('id', round_id).single();
   if (!round || round.status !== 'open') {
@@ -91,6 +86,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // For classic format: check if player lost their last completed round pick
   // (they may not be marked eliminated yet if grading hasn't run)
   const { data: pool } = await supabase.from('pools').select('*').eq('id', id).single();
+
+  // Validate eligibility — skipped for survivor_no_repeat (any ML is valid, odds don't matter)
+  if (pool?.contest_format !== 'survivor_no_repeat' && !isEligiblePick(pick_type, american_odds)) {
+    return NextResponse.json({ error: 'Pick does not meet eligibility requirements' }, { status: 400 });
+  }
+
   if (pool?.contest_format === 'classic') {
     const { data: lastCompletedRound } = await supabase
       .from('rounds')

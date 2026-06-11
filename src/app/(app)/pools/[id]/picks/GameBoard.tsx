@@ -54,6 +54,18 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
   const lockedSport = (normalizedSport !== 'All' && SPORTS.includes(normalizedSport as any)) ? normalizedSport : null;
   const [sportFilter, setSportFilter] = useState<string>(lockedSport ?? 'All');
 
+  // Force a reload once to bust stale mobile browser cache (World Cup pools need updated bundle)
+  useEffect(() => {
+    if (pool.sport === 'World Cup' && typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+      const key = `wc_refreshed_${pool.id}`;
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     fetchGames();
   // eslint-disable-next-line react-hooks/exhaustive-deps

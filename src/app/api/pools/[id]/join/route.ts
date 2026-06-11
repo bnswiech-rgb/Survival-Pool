@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getUserState, isRestrictedState } from '@/lib/geo';
+import { parseTeamScoring } from '@/lib/utils';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -105,6 +106,37 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
   }
 
+  // For team_battle with random formation, auto-assign to a team
+  let assignedTeamId: string | null = null;
+  const { teamFormation } = parseTeamScoring(pool.team_scoring);
+  if (pool.contest_format === 'team_battle' && teamFormation === 'random' && pool.team_size) {
+    // Find an existing team with fewer than team_size members
+    const { data: allParticipants } = await supabase
+      .from('pool_participants')
+      .select('team_id')
+      .eq('pool_id', id)
+      .not('team_id', 'is', null);
+
+    const teamCounts = new Map<string, number>();
+    for (const p of allParticipants ?? []) {
+      const tid = (p as any).team_id;
+      if (tid) teamCounts.set(tid, (teamCounts.get(tid) ?? 0) + 1);
+    }
+
+    // Find team with space
+    for (const [tid, count] of teamCounts) {
+      if (count < pool.team_size) {
+        assignedTeamId = tid;
+        break;
+      }
+    }
+
+    // No team with space — create a new one
+    if (!assignedTeamId) {
+      assignedTeamId = crypto.randomUUID();
+    }
+  }
+
   // Join pool
   const { data: participant, error } = await supabase
     .from('pool_participants')
@@ -114,6 +146,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       payment_status: 'paid' as any,
       status: 'active',
       lives_remaining: pool.lives_count ?? 1,
+      ...(assignedTeamId ? { team_id: assignedTeamId } : {}),
     })
     .select()
     .single();

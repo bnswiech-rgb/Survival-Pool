@@ -87,10 +87,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // (they may not be marked eliminated yet if grading hasn't run)
   const { data: pool } = await supabase.from('pools').select('*').eq('id', id).single();
 
-  // Validate eligibility — skipped for survivor_no_repeat (any ML is valid, odds don't matter)
-  if (pool?.contest_format !== 'survivor_no_repeat' && !isEligiblePick(pick_type, american_odds)) {
-    return NextResponse.json({ error: 'Pick does not meet eligibility requirements' }, { status: 400 });
-  }
 
   if (pool?.contest_format === 'classic') {
     const { data: lastCompletedRound } = await supabase

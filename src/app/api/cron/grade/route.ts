@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { processRoundResults } from '@/lib/contest-engine';
+import { parseTeamScoring } from '@/lib/utils';
 import type { PickStatus } from '@/types';
 
 // ESPN sport/league mapping for team sports grading
 const ESPN_SPORT_MAP: Record<string, { sport: string; league: string }> = {
-  'basketball_nba':  { sport: 'basketball', league: 'nba'  },
-  'basketball_wnba': { sport: 'basketball', league: 'wnba' },
-  'baseball_mlb':    { sport: 'baseball',   league: 'mlb'  },
-  'icehockey_nhl':   { sport: 'hockey',     league: 'nhl'  },
+  'basketball_nba':       { sport: 'basketball', league: 'nba'       },
+  'basketball_wnba':      { sport: 'basketball', league: 'wnba'      },
+  'baseball_mlb':         { sport: 'baseball',   league: 'mlb'       },
+  'icehockey_nhl':        { sport: 'hockey',     league: 'nhl'       },
+  'soccer_fifa_world_cup':{ sport: 'soccer',     league: 'fifa.world'},
 };
 
 const DEADLINE_SPORT_KEYS = [
@@ -56,6 +58,10 @@ function gradePick(
   awayScore: number,
 ): 'won' | 'lost' | 'push' {
   if (pickType === 'moneyline') {
+    // Draw pick: wins if scores are equal, loses otherwise
+    if (side.toLowerCase() === 'draw') {
+      return homeScore === awayScore ? 'won' : 'lost';
+    }
     const pickedIsHome = sideMatchesTeam(side, homeTeam);
     const pickedScore = pickedIsHome ? homeScore : awayScore;
     const oppScore = pickedIsHome ? awayScore : homeScore;
@@ -562,9 +568,9 @@ export async function GET(request: NextRequest) {
 
     console.log(`[advance] picksMap size: ${picksMap.size}, sample:`, JSON.stringify([...picksMap.entries()].slice(0,3)));
     // For team_battle, use team_scoring as the effective contest format
-    // (team_scoring holds the actual style: classic, lives, first_to_x, etc.)
+    // (team_scoring holds the actual style: classic, lives, first_to_x, etc., optionally suffixed with _invite/_random)
     const effectiveFormat = pool.contest_format === 'team_battle' && pool.team_scoring
-      ? pool.team_scoring
+      ? parseTeamScoring(pool.team_scoring).effectiveFormat
       : pool.contest_format;
 
     const { updates, startTiebreaker } = processRoundResults(

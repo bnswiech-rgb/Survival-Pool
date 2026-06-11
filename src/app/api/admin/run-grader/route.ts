@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { processRoundResults } from '@/lib/contest-engine';
 import { autoGradePendingPicks } from '@/lib/autoGrade';
+import { parseTeamScoring } from '@/lib/utils';
 import type { PickStatus } from '@/types';
 
 export async function POST(_request: NextRequest) {
@@ -67,7 +68,7 @@ export async function POST(_request: NextRequest) {
           if (pid) picksMap.set(pid, pick.status as PickStatus);
         }
         const effectiveFormat = pool.contest_format === 'team_battle' && pool.team_scoring
-          ? pool.team_scoring : pool.contest_format;
+          ? parseTeamScoring(pool.team_scoring).effectiveFormat : pool.contest_format;
         const { updates } = processRoundResults(rParticipants as any, picksMap, {
           contest_format: effectiveFormat, push_rule: pool.push_rule,
           all_lose_rule: pool.all_lose_rule, lives_count: pool.lives_count,

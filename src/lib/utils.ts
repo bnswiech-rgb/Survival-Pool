@@ -60,6 +60,15 @@ export function timeUntil(dateString: string): string {
   return `${minutes}m`;
 }
 
+// Parses team_scoring which may have a "_invite" or "_random" suffix
+// e.g. "classic_random" → { effectiveFormat: "classic", teamFormation: "random" }
+export function parseTeamScoring(teamScoring: string | null): { effectiveFormat: string; teamFormation: 'invite' | 'random' } {
+  if (!teamScoring) return { effectiveFormat: 'classic', teamFormation: 'invite' };
+  if (teamScoring.endsWith('_random')) return { effectiveFormat: teamScoring.slice(0, -7), teamFormation: 'random' };
+  if (teamScoring.endsWith('_invite')) return { effectiveFormat: teamScoring.slice(0, -7), teamFormation: 'invite' };
+  return { effectiveFormat: teamScoring, teamFormation: 'invite' };
+}
+
 export function getContestFormatLabel(format: string): string {
   const labels: Record<string, string> = {
     classic: 'Classic Survival',

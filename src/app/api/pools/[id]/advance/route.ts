@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { processRoundResults } from '@/lib/contest-engine';
+import { parseTeamScoring } from '@/lib/utils';
 import type { PickStatus } from '@/types';
 
 const SPORT_KEYS = [
@@ -10,13 +11,68 @@ const SPORT_KEYS = [
   'tennis_atp_us_open', 'tennis_wta_us_open',
 ];
 
-async function getNextRoundDeadline(frequency: string): Promise<Date> {
+// ESPN endpoints for game_day frequency by sport
+const ESPN_GAME_DAY_MAP: Record<string, { sport: string; league: string }> = {
+  'World Cup': { sport: 'soccer', league: 'fifa.world' },
+};
+const ESPN_NBA = { sport: 'basketball', league: 'nba' };
+
+// Returns the next game day AND the first kickoff time on that day
+async function findNextESPNGameDay(sport: string, startFromOffset = 1, maxDays = 7): Promise<{ dateStr: string; firstKickoff: Date | null } | null> {
+  const espnConfig = ESPN_GAME_DAY_MAP[sport] ?? ESPN_NBA;
+  const now = new Date();
+  for (let offset = startFromOffset; offset <= maxDays; offset++) {
+    const d = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
+    const dateStr = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+    try {
+      const res = await fetch(
+        `https://site.api.espn.com/apis/site/v2/sports/${espnConfig.sport}/${espnConfig.league}/scoreboard?dates=${dateStr}`,
+        { cache: 'no-store' },
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!Array.isArray(data?.events) || data.events.length === 0) continue;
+      // Find first kickoff time across all events
+      let firstKickoff: Date | null = null;
+      for (const event of data.events) {
+        const t = event.date ? new Date(event.date) : null;
+        if (t && (!firstKickoff || t < firstKickoff)) firstKickoff = t;
+      }
+      const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      return { dateStr: iso, firstKickoff };
+    } catch { continue; }
+  }
+  return null;
+}
+
+async function getNextRoundDeadline(frequency: string, sport?: string): Promise<Date> {
   // For weekly pools, deadline is 7 days out at 9:30 PM ET
   if (frequency === 'weekly') {
     const d = new Date();
     d.setDate(d.getDate() + 7);
     d.setHours(21, 30, 0, 0);
     return d;
+  }
+
+  // For game_day: find the next day ESPN has games, deadline = 30 min before first kickoff
+  if (frequency === 'game_day') {
+    try {
+      const result = await findNextESPNGameDay(sport ?? 'NBA');
+      if (result) {
+        if (result.firstKickoff) {
+          // 30 minutes before first game
+          return new Date(result.firstKickoff.getTime() - 30 * 60 * 1000);
+        }
+        // No kickoff time — fallback to midnight ET on that game day
+        const p = result.dateStr.split('-').map(Number);
+        return new Date(Date.UTC(p[0], p[1] - 1, p[2], 4, 0, 0, 0)); // midnight ET
+      }
+    } catch { /* fall through */ }
+    // Fallback: noon ET tomorrow
+    const fallback = new Date();
+    fallback.setUTCDate(fallback.getUTCDate() + 1);
+    fallback.setUTCHours(16, 0, 0, 0); // noon ET = 16:00 UTC
+    return fallback;
   }
 
   // For daily: fetch tomorrow's games, use the latest start time
@@ -55,7 +111,6 @@ async function getNextRoundDeadline(frequency: string): Promise<Date> {
   } catch { /* fall through */ }
 
   // Fallback: 9:30 PM ET tomorrow
-  // ET = UTC-5 (EST) or UTC-4 (EDT); use UTC-4 (EDT) for safety during sports season
   const fallback = new Date();
   fallback.setUTCDate(fallback.getUTCDate() + 1);
   fallback.setUTCHours(1, 30, 0, 0); // 9:30 PM EDT = 01:30 UTC next day
@@ -94,6 +149,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .select('*')
     .eq('round_id', currentRound.id)
     .neq('status', 'pending');
+
+  // For team_battle random pools: boot incomplete teams before round 1 processes
+  const { teamFormation } = parseTeamScoring(pool.team_scoring);
+  if (pool.contest_format === 'team_battle' && teamFormation === 'random' && currentRound.round_number === 1) {
+    const { data: allActive } = await supabase
+      .from('pool_participants')
+      .select('id, team_id, user_id')
+      .eq('pool_id', id)
+      .in('status', ['active', 'advanced']);
+
+    const teamCounts = new Map<string, string[]>();
+    for (const p of allActive ?? []) {
+      const tid = (p as any).team_id ?? '__solo__';
+      if (!teamCounts.has(tid)) teamCounts.set(tid, []);
+      teamCounts.get(tid)!.push(p.id);
+    }
+
+    const requiredSize = pool.team_size ?? 2;
+    for (const [, memberIds] of teamCounts) {
+      if (memberIds.length < requiredSize) {
+        // Boot incomplete team members
+        for (const pid of memberIds) {
+          await supabase.from('pool_participants').update({ status: 'eliminated', eliminated_round: 0 }).eq('id', pid);
+        }
+      }
+    }
+  }
 
   // Get active participants
   const { data: participants } = await supabase
@@ -299,7 +381,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       await supabase.from('pools').update({ status: 'active' }).eq('id', id);
     }
     // Deadline = latest game start time for the next day, or 9:30 PM ET fallback
-    const nextDeadline = await getNextRoundDeadline(pool.round_frequency);
+    const nextDeadline = await getNextRoundDeadline(pool.round_frequency, pool.sport);
 
     await supabase.from('rounds').insert({
       pool_id: id,

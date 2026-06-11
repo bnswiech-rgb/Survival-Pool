@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import type { ContestFormat } from '@/types';
 import { ChevronRight, ChevronLeft, Trophy } from 'lucide-react';
 
-const SPORTS = ['All Sports', 'NBA', 'WNBA', 'MLB', 'NHL', 'ATP', 'WTA'];
+const SPORTS = ['All Sports', 'NBA', 'WNBA', 'MLB', 'NHL', 'ATP', 'WTA', 'World Cup'];
 const FORMATS: { value: ContestFormat; label: string; desc: string }[] = [
   { value: 'classic', label: 'Classic Survival', desc: 'One life. Lose once, you\'re out.' },
   { value: 'lives', label: 'Lives Mode', desc: 'Multiple lives. Survive until all lives are gone.' },
@@ -37,6 +37,7 @@ export default function CreatePoolPage() {
 
   // Step 2: Format
   const [isTeamPool, setIsTeamPool] = useState(false);
+  const [teamMode, setTeamMode] = useState<'invite' | 'random'>('invite');
   const [teamSize, setTeamSize] = useState('2');
   const [contestFormat, setContestFormat] = useState<ContestFormat>('classic');
   const [livesCount, setLivesCount] = useState('3');
@@ -73,6 +74,7 @@ export default function CreatePoolPage() {
         contest_format: isTeamPool ? 'team_battle' : contestFormat,
         team_scoring: isTeamPool ? contestFormat : null,
         team_size: isTeamPool ? parseInt(teamSize) || 2 : null,
+        team_mode: isTeamPool ? teamMode : null,
         lives_count: parseInt(livesCount),
         target_wins: parseInt(targetWins),
         target_streak: parseInt(targetStreak),
@@ -208,15 +210,36 @@ export default function CreatePoolPage() {
 
             {/* Team size — only shown for team pools */}
             {isTeamPool && (
-              <Input
-                label="Players Per Team"
-                type="number"
-                value={teamSize}
-                onChange={e => setTeamSize(e.target.value)}
-                min="2"
-                max="10"
-                hint="All players on a team must win for the team to advance. Any loss = team loses."
-              />
+              <>
+                <Input
+                  label="Players Per Team"
+                  type="number"
+                  value={teamSize}
+                  onChange={e => setTeamSize(e.target.value)}
+                  min="2"
+                  max="10"
+                  hint="All players on a team must win for the team to advance. Any loss = team loses."
+                />
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-300">Team Formation</label>
+                  <div className="flex gap-2">
+                    {[
+                      { value: 'invite' as const, label: 'Invite', desc: 'Players form their own teams using invite codes. Incomplete teams are booted at round 1.' },
+                      { value: 'random' as const, label: 'Random', desc: 'Players are auto-assigned to random teams on join. Leftover players are booted at round 1.' },
+                    ].map(opt => (
+                      <button key={opt.value} type="button" onClick={() => setTeamMode(opt.value)}
+                        className={`flex-1 text-left px-4 py-3 rounded-xl border transition-colors ${
+                          teamMode === opt.value
+                            ? 'bg-green-500/20 border-green-500/50'
+                            : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                        }`}>
+                        <div className="font-bold text-white text-sm">{opt.label}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Format picker — same options for solo and team */}
@@ -329,7 +352,7 @@ export default function CreatePoolPage() {
                 {([
                   { value: 'daily', label: 'Daily', desc: 'New round every day' },
                   { value: 'weekly', label: 'Weekly', desc: 'New round every week' },
-                  { value: 'game_day', label: 'Game Day', desc: 'Auto-schedules when NBA games are on' },
+                  { value: 'game_day', label: 'Game Day' },
                 ] as const).map(opt => (
                   <button
                     key={opt.value}
@@ -338,7 +361,9 @@ export default function CreatePoolPage() {
                     className={`p-3 rounded-lg border text-left transition-colors ${roundFrequency === opt.value ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
                   >
                     <div className="text-sm font-medium text-white">{opt.label}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {'desc' in opt ? opt.desc : 'New round only on days with games'}
+                    </div>
                   </button>
                 ))}
               </div>

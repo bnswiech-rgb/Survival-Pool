@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
-import { formatCents, calculatePrizePool, getContestFormatLabel } from '@/lib/utils';
+import { formatCents, calculatePrizePool, getContestFormatLabel, parseTeamScoring } from '@/lib/utils';
 import type { Pool, PoolParticipant, Round, Pick, Profile } from '@/types';
 import toast from 'react-hot-toast';
 import { Users, Clock, Trophy, Target, Zap } from 'lucide-react';
@@ -65,6 +65,7 @@ export function PoolDetailClient({
   const [teamLoading, setTeamLoading] = useState(false);
   const [submittedIds, setSubmittedIds] = useState<string[]>(submittedPickUserIds);
   const supabase = createClient();
+  const { teamFormation } = parseTeamScoring((pool as any).team_scoring);
 
   // Refresh submitted pick user IDs every 30 seconds for team_battle pools
   useEffect(() => {
@@ -483,30 +484,36 @@ export function PoolDetailClient({
                           </div>
                         ))}
                       </div>
-                      <div className="pt-2 border-t border-gray-800">
-                        <div className="text-xs text-gray-400 mb-1">Team Invite</div>
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm font-bold text-green-400 bg-gray-800 px-3 py-1.5 rounded flex-1 tracking-widest">
-                            {myTeam.invite_code}
-                          </code>
-                          <button
-                            onClick={() => {
-                              const link = `${window.location.origin}/pools/${pool.id}?joinTeam=${myTeam.invite_code}`;
-                              if (navigator.share) {
-                                navigator.share({ title: `Join my team in ${pool.name}`, url: link });
-                              } else {
-                                navigator.clipboard.writeText(link);
-                                toast.success('Invite link copied!');
-                              }
-                            }}
-                            className="text-xs text-gray-400 hover:text-white px-2 py-1.5 border border-gray-700 rounded whitespace-nowrap"
-                          >
-                            Share link
-                          </button>
+                      {teamFormation === 'invite' && (
+                        <div className="pt-2 border-t border-gray-800">
+                          <div className="text-xs text-gray-400 mb-1">Team Invite</div>
+                          <div className="flex items-center gap-2">
+                            <code className="text-sm font-bold text-green-400 bg-gray-800 px-3 py-1.5 rounded flex-1 tracking-widest">
+                              {myTeam.invite_code}
+                            </code>
+                            <button
+                              onClick={() => {
+                                const link = `${window.location.origin}/pools/${pool.id}?joinTeam=${myTeam.invite_code}`;
+                                if (navigator.share) {
+                                  navigator.share({ title: `Join my team in ${pool.name}`, url: link });
+                                } else {
+                                  navigator.clipboard.writeText(link);
+                                  toast.success('Invite link copied!');
+                                }
+                              }}
+                              className="text-xs text-gray-400 hover:text-white px-2 py-1.5 border border-gray-700 rounded whitespace-nowrap"
+                            >
+                              Share link
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1">Share this link — teammates land on the pool page with the code pre-filled</p>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">Share this link — teammates land on the pool page with the code pre-filled</p>
-                      </div>
+                      )}
                     </div>
+                  ) : teamFormation === 'random' ? (
+                    <p className="text-sm text-gray-400 text-center py-2">
+                      You&apos;ll be auto-assigned to a random team when the contest fills up.
+                    </p>
                   ) : (
                     <div className="space-y-4">
                       <div className="space-y-2">

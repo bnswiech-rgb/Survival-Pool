@@ -2,10 +2,11 @@
 // Called from the admin run-grader before advancing rounds
 
 const ESPN_LEAGUE_MAP: Record<string, { sport: string; league: string }> = {
-  basketball_nba:    { sport: 'basketball', league: 'nba' },
-  basketball_wnba:   { sport: 'basketball', league: 'wnba' },
-  baseball_mlb:      { sport: 'baseball',   league: 'mlb' },
-  icehockey_nhl:     { sport: 'hockey',     league: 'nhl' },
+  basketball_nba:        { sport: 'basketball', league: 'nba'        },
+  basketball_wnba:       { sport: 'basketball', league: 'wnba'       },
+  baseball_mlb:          { sport: 'baseball',   league: 'mlb'        },
+  icehockey_nhl:         { sport: 'hockey',     league: 'nhl'        },
+  soccer_fifa_world_cup: { sport: 'soccer',     league: 'fifa.world' },
 };
 
 const ESPN_TENNIS_MAP: Record<string, string> = {
@@ -49,6 +50,10 @@ function gradeTeamPick(
   homeScore: number, awayScore: number
 ): 'won' | 'lost' | 'push' | null {
   if (pick.pick_type === 'moneyline') {
+    // Draw pick: wins if scores are equal, loses otherwise
+    if (pick.side.toLowerCase() === 'draw') {
+      return homeScore === awayScore ? 'won' : 'lost';
+    }
     const pickHome = sideMatchesTeam(pick.side, homeTeam);
     const pickAway = sideMatchesTeam(pick.side, awayTeam);
     if (!pickHome && !pickAway) return null;

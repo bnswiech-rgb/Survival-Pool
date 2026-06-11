@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { processRoundResults } from '@/lib/contest-engine';
+import { parseTeamScoring } from '@/lib/utils';
 import type { PickStatus } from '@/types';
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -101,7 +102,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     if (picks.length > 0 && picksMap.size === 0) { roundsProcessed++; continue; }
 
     const effectiveFormat = pool.contest_format === 'team_battle' && pool.team_scoring
-      ? pool.team_scoring : pool.contest_format;
+      ? parseTeamScoring(pool.team_scoring).effectiveFormat : pool.contest_format;
 
     const { updates } = processRoundResults(
       participants as any,

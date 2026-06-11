@@ -36,7 +36,7 @@ interface GameBoardProps {
   onPickSubmitted?: () => void;
 }
 
-const SPORTS = ['All', 'NBA', 'WNBA', 'MLB', 'NHL', 'ATP', 'WTA'] as const;
+const SPORTS = ['All', 'NBA', 'WNBA', 'MLB', 'NHL', 'ATP', 'WTA', 'World Cup'] as const;
 
 export default function GameBoard({ pool, round, existingPick, isLocked, inline, onPickSubmitted }: GameBoardProps) {
   const router = useRouter();
@@ -48,6 +48,7 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
   const [filter, setFilter] = useState<'all' | 'spread' | 'total' | 'moneyline'>('all');
   const [usedTeams, setUsedTeams] = useState<string[]>([]);
   const isSurvivorNoRepeat = (pool.contest_format as string) === 'survivor_no_repeat';
+  const isWorldCup = pool.sport === 'World Cup';
   // Normalize sport — "All Sports" means no lock, show all with tabs
   const normalizedSport = pool.sport === 'All Sports' ? 'All' : pool.sport;
   const lockedSport = (normalizedSport !== 'All' && SPORTS.includes(normalizedSport as any)) ? normalizedSport : null;
@@ -76,7 +77,8 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
       const startParam = pool.start_date ? `&start=${encodeURIComponent(pool.start_date)}` : '';
       const todayOnly = pool.contest_format === 'team_battle' ? '&today_only=true' : '';
       const noOddsLimit = isSurvivorNoRepeat ? '&no_odds_limit=true' : '';
-      const res = await fetch(`/api/odds?sport=${encodeURIComponent(sportFilter)}${deadlineParam}${startParam}${todayOnly}${noOddsLimit}`);
+      const noML = isWorldCup ? '&no_ml=true' : '';
+      const res = await fetch(`/api/odds?sport=${encodeURIComponent(sportFilter)}${deadlineParam}${startParam}${todayOnly}${noOddsLimit}${noML}`);
       const data = await res.json();
       if (data.error) {
         toast.error(data.error);
@@ -204,7 +206,7 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
 
           {/* Pick type filter tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-            {(['all', 'spread', 'total', 'moneyline'] as const).map(f => (
+            {(['all', 'spread', 'total', 'moneyline'] as const).filter(f => !isWorldCup || f !== 'moneyline').map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -309,11 +311,15 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
                   const gameTime = new Date(game.commenceTime);
                   const spreads = game.picks.filter(p => p.type === 'spread');
                   const totals = game.picks.filter(p => p.type === 'total');
-                  const mls = game.picks.filter(p => p.type === 'moneyline');
+                  // For World Cup: only show Draw from moneyline picks
+                  const mls = isWorldCup
+                    ? game.picks.filter(p => p.type === 'moneyline' && p.team.toLowerCase() === 'draw')
+                    : game.picks.filter(p => p.type === 'moneyline');
 
                   const showSpreads = filter === 'all' || filter === 'spread';
                   const showTotals = filter === 'all' || filter === 'total';
-                  const showMLs = filter === 'all' || filter === 'moneyline';
+                  // For World Cup, always show Draw (it appears in the moneyline slot)
+                  const showMLs = isWorldCup ? true : (filter === 'all' || filter === 'moneyline');
 
                   const isTeamUsed = (team: string) =>
                     isSurvivorNoRepeat && usedTeams.includes(team.toLowerCase().trim());

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   const {
     name, sport, visibility, max_entries, contest_format, lives_count, target_wins, target_streak,
     max_losses, push_resets_streak, entry_fee_cents, entry_fee_coins, rake_percentage, start_date: raw_start_date, pick_deadline,
-    round_frequency, push_rule, all_lose_rule, prize_structure, team_size, pool_type,
+    round_frequency, push_rule, all_lose_rule, prize_structure, team_size, pool_type, team_mode,
   } = body;
 
   if (!name || !sport || !raw_start_date) {
@@ -100,6 +100,11 @@ export async function POST(request: NextRequest) {
     all_lose_rule: all_lose_rule ?? 'repeat',
     prize_structure: prize_structure ?? 'winner_take_all',
     team_size: team_size ?? null,
+    // Encode team formation mode in team_scoring: e.g. "classic_random" or "classic_invite"
+    // Suffix is stripped when used as effectiveFormat in grader/advance routes
+    team_scoring: contest_format === 'team_battle'
+      ? `${body.team_scoring ?? 'classic'}_${team_mode === 'random' ? 'random' : 'invite'}`
+      : null,
     pool_type: (pool_type === 'free' || pool_type === 'cash') ? pool_type : 'free',
     status: 'open',
     created_by: user.id,
@@ -115,34 +120,41 @@ export async function POST(request: NextRequest) {
   const now = new Date();
 
   if (isGameDay) {
-    let firstGameDateStr: string | null = null;
+    // Pick the ESPN endpoint based on sport
+    const espnGameDayMap: Record<string, { sport: string; league: string }> = {
+      'World Cup': { sport: 'soccer', league: 'fifa.world' },
+    };
+    const espnConfig = espnGameDayMap[sport] ?? { sport: 'basketball', league: 'nba' };
+
+    let firstKickoff: Date | null = null;
     try {
-      // Check today + next 3 days on ESPN scoreboard
-      for (let offset = 0; offset <= 3; offset++) {
+      // Check today + next 7 days on ESPN scoreboard, find first game with kickoff time
+      for (let offset = 0; offset <= 7; offset++) {
         const d = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
         const dateStr = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
         const res = await fetch(
-          `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${dateStr}`,
+          `https://site.api.espn.com/apis/site/v2/sports/${espnConfig.sport}/${espnConfig.league}/scoreboard?dates=${dateStr}`,
           { cache: 'no-store' },
         );
         if (!res.ok) continue;
         const data = await res.json();
-        if (Array.isArray(data?.events) && data.events.length > 0) {
-          // Found a game day — use this date
-          firstGameDateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-          break;
+        if (!Array.isArray(data?.events) || data.events.length === 0) continue;
+        // Find the earliest kickoff on this game day
+        for (const event of data.events) {
+          const t = event.date ? new Date(event.date) : null;
+          if (t && (!firstKickoff || t < firstKickoff)) firstKickoff = t;
         }
+        if (firstKickoff) break;
       }
     } catch { /* fall through to fallback */ }
 
-    if (firstGameDateStr) {
-      const p = firstGameDateStr.split('-').map(Number);
-      // 11:59 PM ET on game day = 03:59 UTC next day
-      firstRoundDeadline = new Date(Date.UTC(p[0], p[1] - 1, p[2] + 1, 3, 59, 0, 0));
+    if (firstKickoff) {
+      // Deadline = 30 minutes before first game
+      firstRoundDeadline = new Date(firstKickoff.getTime() - 30 * 60 * 1000);
     } else {
-      // Fallback: 11:59 PM ET tomorrow
+      // Fallback: noon ET tomorrow
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      firstRoundDeadline = new Date(Date.UTC(tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate() + 1, 3, 59, 0, 0));
+      firstRoundDeadline = new Date(Date.UTC(tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate(), 16, 0, 0, 0));
     }
   } else {
     const dateOnly = start_date.substring(0, 10);

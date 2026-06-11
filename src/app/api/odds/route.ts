@@ -36,6 +36,7 @@ const SPORT_KEYS: Record<string, string[]> = {
     'soccer_italy_serie_a',
     'soccer_france_ligue_one',
   ],
+  'World Cup': ['soccer_fifa_world_cup'],
 };
 
 // All supported sport keys combined
@@ -80,6 +81,9 @@ export async function GET(request: NextRequest) {
   const deadline = searchParams.get('deadline') ?? undefined;
   const todayOnly = searchParams.get('today_only') === 'true';
   const noOddsLimit = searchParams.get('no_odds_limit') === 'true';
+  // World Cup: never show ML picks, spread odds filter is relaxed (soccer lines vary widely)
+  const isWorldCup = sport === 'World Cup';
+  const noML = isWorldCup || searchParams.get('no_ml') === 'true';
   let { start: tomorrowStart, end: tomorrowEnd } = getEligibleRange(startDate, deadline);
 
   // For team_battle pools: only show games starting today (ET).
@@ -183,7 +187,9 @@ export async function GET(request: NextRequest) {
       if (spreadsMarket) {
         for (const outcome of spreadsMarket.outcomes) {
           const odds = Math.round(outcome.price);
-          if (odds >= -145 && odds <= -100) {
+          // Soccer/World Cup: relax odds filter — lines like -130/+110 are common
+          const spreadOddsOk = isWorldCup ? (odds >= -200) : (odds >= -145 && odds <= -100);
+          if (spreadOddsOk) {
             picks.push({
               type: 'spread',
               team: outcome.name,
@@ -224,14 +230,14 @@ export async function GET(request: NextRequest) {
       if (h2hMarket) {
         for (const outcome of h2hMarket.outcomes) {
           const odds = Math.round(outcome.price);
-          if (noOddsLimit || odds > 0 || odds >= -150) {
-            picks.push({
-              type: 'moneyline',
-              team: outcome.name,
-              line: null,
-              odds,
-              label: outcome.name,
-            });
+          const isDraw = outcome.name.toLowerCase() === 'draw';
+          // World Cup: only show Draw, not team MLs. Other sports: normal ML filter.
+          if (noML) {
+            if (isDraw) {
+              picks.push({ type: 'moneyline', team: 'Draw', line: null, odds, label: 'Draw' });
+            }
+          } else if (noOddsLimit || odds > 0 || odds >= -150) {
+            picks.push({ type: 'moneyline', team: outcome.name, line: null, odds, label: outcome.name });
           }
         }
       }

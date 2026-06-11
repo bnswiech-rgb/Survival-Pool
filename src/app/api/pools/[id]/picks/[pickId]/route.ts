@@ -24,11 +24,6 @@ export async function PATCH(
   const body = await request.json();
   const { sport, league, game, pick_type, side, line_value, american_odds, game_start_time } = body;
 
-  if (american_odds !== undefined && pick_type) {
-    if (!isEligiblePick(pick_type, american_odds)) {
-      return NextResponse.json({ error: 'Pick does not meet eligibility requirements' }, { status: 400 });
-    }
-  }
 
   const { data: updated, error } = await supabase
     .from('picks')

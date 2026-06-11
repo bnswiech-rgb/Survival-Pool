@@ -413,11 +413,11 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
                           </div>
                         )}
 
-                        {/* Moneylines */}
+                        {/* Moneylines / Draw */}
                         {showMLs && mls.length > 0 && (
                           <div>
-                            <p className="text-xs text-gray-600 uppercase tracking-wider mb-1 px-1">Moneyline</p>
-                            <div className="grid grid-cols-2 gap-1.5">
+                            <p className="text-xs text-gray-600 uppercase tracking-wider mb-1 px-1">{isWorldCup ? 'Draw' : 'Moneyline'}</p>
+                            <div className={`grid gap-1.5 ${isWorldCup ? 'grid-cols-1' : 'grid-cols-2'}`}>
                               {mls.map((pick, i) => {
                                 const isPickSelected = selectedPick === pick && selectedGame?.id === game.id;
                                 const burned = isTeamUsed(pick.team);
@@ -438,6 +438,7 @@ export default function GameBoard({ pool, round, existingPick, isLocked, inline,
                                     }`}
                                   >
                                     <span className="truncate">{pick.label}</span>
+                                    <span className="text-xs ml-2 opacity-70">{pick.odds > 0 ? `+${pick.odds}` : pick.odds}</span>
                                   </button>
                                 );
                               })}

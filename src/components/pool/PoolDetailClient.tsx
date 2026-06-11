@@ -717,14 +717,6 @@ export function PoolDetailClient({
                 )}
               </CardBody>
             </Card>
-            <Card>
-              <CardHeader><h3 className="font-bold text-white text-sm">Pick Eligibility</h3></CardHeader>
-              <CardBody className="text-xs text-gray-400 space-y-2">
-                <p>• Spread/Total: odds must be between -115 and -105</p>
-                <p>• Moneyline: must be -150 or better (less negative)</p>
-                <p>• Heavily favored picks are not eligible</p>
-              </CardBody>
-            </Card>
 
             {/* Creator settings — only visible to pool creator */}
             {isCreator && (
